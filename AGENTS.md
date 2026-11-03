@@ -15,6 +15,6 @@
 - Financial content remains hidden by the central provider until a verified employee session loads; public auth, recovery and demo-entry screens bypass the app shell — prevents pre-login financial rendering.
 - Financial math lives in pure functions in `src/lib/calc.ts` with tests — dashboard, budgets and scenarios must agree.
 - Approval status and reimbursement status are separate fields; approved never implies paid.
-- Fictional preview personas are defined in a pure configuration module and only affect the in-memory demo provider; they never assign backend roles or grant access to company records.
+- Sample-data preview personas are defined in a pure configuration module and only affect the in-memory demo provider; displayed workbook employee identities never assign backend roles or grant access to company records.
 - Workbook directory fixtures live in a shared browser-safe module; sample spending tracks reference its employee and department IDs while preserving deterministic financial values independently of display names.
 - Development Admin authorization is owner-provisioned separately from employee roles and requires a revalidated, confirmed account; it opens the fictional provider only, never company finance permissions.
