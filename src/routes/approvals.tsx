@@ -64,9 +64,9 @@ function ReviewCard({ e }: { e: Expense }) {
   const rec = recommend(e, { duplicate: !!dup, issues, available });
   const receipt = receipts.find((r) => r.id === e.receiptId);
 
-  const act = (d: "approved" | "rejected" | "changes_requested") => {
+  const act = async (d: "approved" | "rejected" | "changes_requested") => {
     if (d === "changes_requested" && !comment.trim()) { toast.error("Add a comment describing the changes needed"); return; }
-    decide(e.id, d, comment.trim()); toast.success(`Expense ${d.replace("_", " ")}`);
+    await decide(e.id, d, comment.trim()); toast.success(`Expense ${d.replace("_", " ")}`);
   };
 
   return (

@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore } from "@/data/store";
 import { CATEGORIES, type Category } from "@/data/types";
+import { supabase } from "@/integrations/supabase/client";
 import { DEMO_TODAY } from "@/data/seed";
 import { DemoBadge, Field, NotConnected, nativeSelect } from "./shared";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 
 export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { currentUser, departments, projects, projectDepartments, submitExpense } = useStore();
+  const { currentUser, departments, projects, projectDepartments, submitExpense, mode } = useStore();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [extracted, setExtracted] = useState(false);
@@ -30,6 +31,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
     setFile(f);
     setPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
     // Simulated extraction: placeholder values so the review flow can be tested. Not real AI output.
+    if (mode === "internal") { setExtracted(false); return; }
     const seed = f.name.length + f.size;
     setForm((s) => ({ ...s, vendor: "NorthLab Supply Co.", amount: (40 + (seed % 900)).toFixed(2), category: "Lab Supplies", description: "Extracted (simulated) — please verify" }));
     setExtracted(true);
@@ -39,13 +41,22 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const amount = parseFloat(form.amount);
   const valid = form.vendor.trim() && amount > 0 && form.date;
 
-  const submit = () => {
+  const submit = async () => {
     if (!valid) return;
-    submitExpense(
+    let storagePath: string | undefined;
+    if (mode === "internal" && file) {
+      if (file.size > 10 * 1024 * 1024) { toast.error("Receipt must be 10 MB or smaller"); return; }
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+      storagePath = `${data.user.id}/${crypto.randomUUID()}`;
+      const uploaded = await supabase.storage.from("private-receipts").upload(storagePath, file);
+      if (uploaded.error) { toast.error(uploaded.error.message); return; }
+    }
+    await submitExpense(
       { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description },
-      file ? { fileName: file.name, fileType: file.type, previewUrl: preview, extractionSimulated: extracted } : undefined,
+      file ? { fileName: file.name, fileType: file.type, previewUrl: preview, extractionSimulated: extracted, storagePath } : undefined,
     );
-    toast.success("Expense submitted for approval (demo)");
+    toast.success(mode === "demo" ? "Expense submitted for approval (demo)" : "Expense submitted for approval");
     onOpenChange(false);
   };
 
@@ -93,7 +104,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
               </Field>
               <Field label="Department">
                 <select className={nativeSelect} value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value, projectId: "" })}>
-                  {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  {departments.filter(d => mode === "demo" || d.id === currentUser.departmentId).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </Field>
             </div>

@@ -58,7 +58,7 @@ function Reimbursements() {
                     <td className="px-3 text-right font-medium tabular-nums">{money(r.amount, 2)}</td>
                     <td className="whitespace-nowrap px-5 text-right">
                       <Button size="sm" variant="ghost" onClick={() => setDetail(r)}>History</Button>
-                      {canAuthorize && (r.status === "await_authorization" as string || r.status === "awaiting_authorization" || r.status === "failed") && <Button size="sm" variant="outline" onClick={() => setConfirm(r)}><ShieldCheck className="h-3.5 w-3.5" />Authorize</Button>}
+                      {canAuthorize && (r.status === "awaiting_authorization" || r.status === "failed") && <Button size="sm" variant="outline" onClick={() => setConfirm(r)}><ShieldCheck className="h-3.5 w-3.5" />Authorize</Button>}
                     </td>
                   </tr>
                 );

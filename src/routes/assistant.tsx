@@ -43,7 +43,7 @@ function Assistant() {
     if (t.includes("department") && (t.includes("most") || t.includes("highest"))) {
       const ranked = departments.map((d) => ({ d, v: expenses.filter((e) => e.approvalStatus === "approved" && e.departmentId === d.id).reduce((s, e) => s + e.amount, 0) })).sort((a, b) => b.v - a.v);
       const first = ranked[0]; const second = ranked[1];
-      return { from: "bot", text: first ? `${first.d.name} has the highest visible approved spend at ${money(first.v)}${second ? `, followed by ${second.d.name} (${money(second.v)})` : ""}." : "No authorized department spending available." };
+      return { from: "bot", text: first ? `${first.d.name} has the highest visible approved spend at ${money(first.v)}${second ? `, followed by ${second.d.name} (${money(second.v)})` : ""}.` : "No authorized department spending available." };
     }
     if (t.includes("afford")) {
       const amt = Number(t.match(/\$?\s?(\d[\d,]*)/)?.[1]?.replace(/,/g, "")) || 2000;
