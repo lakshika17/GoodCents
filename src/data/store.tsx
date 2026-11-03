@@ -116,7 +116,7 @@ function useStoreValue() {
   const visibleNotifications = s.notifications.filter((n) => n.audience.includes(role) && (role !== "employee" || !n.employeeId || n.employeeId === currentUser.id));
 
   return {
-    ...s, role, setRole, preview, setPreview, currentUser, uid, visibleNotifications, mode: "demo" as "demo" | "internal", canAuthorize: DEMO_PREVIEWS[preview].canAuthorize, sharedTotals: [] as { project_id: string; approved_total: number; pending_total: number }[],
+    ...s, role, setRole, preview, setPreview, authenticatedDevelopment: false, currentUser, uid, visibleNotifications, mode: "demo" as "demo" | "internal", canAuthorize: DEMO_PREVIEWS[preview].canAuthorize, sharedTotals: [] as { project_id: string; approved_total: number; pending_total: number }[],
     submitExpense, decide, respondToChanges, setReimbursementStatus, upsertBudget, upsertEmployee, removeEmployee,
     upsertDepartment, upsertProject, setPolicy, markAllRead,
   };
@@ -124,9 +124,9 @@ function useStoreValue() {
 
 type Store = ReturnType<typeof useStoreValue>;
 const Ctx = createContext<Store | null>(null);
-function DemoProvider({ children }: { children: ReactNode }) {
+function DemoProvider({ children, authenticated = false }: { children: ReactNode; authenticated?: boolean }) {
   const v = useStoreValue();
-  return <Ctx.Provider value={v}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ ...v, authenticatedDevelopment: authenticated }}>{children}</Ctx.Provider>;
 }
 export function StoreProvider({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: s => s.location.pathname });
@@ -156,7 +156,7 @@ function SignedInProvider({ children }: { children: ReactNode }) {
   const access = useQuery({ queryKey: ['developer-access'], queryFn: () => loadAccess(), retry: false });
   if (access.isPending) return <p className="p-6 text-muted-foreground">Checking verified access…</p>;
   if (access.error) return <div className="p-6"><p role="alert">Development access could not be verified.</p><Button onClick={() => void supabase.auth.signOut()}>Sign out</Button></div>;
-  if (access.data?.authorized) return <DemoProvider>{children}</DemoProvider>;
+  if (access.data?.authorized) return <DemoProvider authenticated>{children}</DemoProvider>;
   return <InternalProvider>{children}</InternalProvider>;
 }
 function InternalProvider({ children }: { children: ReactNode }) {
@@ -187,7 +187,7 @@ function InternalProvider({ children }: { children: ReactNode }) {
     projects: dataRows<Project>('projects'), projectDepartments: rows('project_departments').map(r => ({ projectId: r["project_id"], departmentId: r["department_id"] })),
     budgets: dataRows<Budget>('budgets'), expenses, receipts: dataRows<Receipt>('receipts'), approvals: dataRows<Approval>('approvals'), reimbursements: dataRows<Reimbursement>('reimbursements'), notifications,
     policy: (rows('approval_policies')[0]?.['data'] ?? seed.defaultPolicy) as ApprovalPolicy,
-    role, setRole: denied, preview: 'developer', setPreview: denied, currentUser, uid: prefix => `${prefix}-${crypto.randomUUID()}`, visibleNotifications: notifications,
+    role, setRole: denied, preview: 'developer', setPreview: denied, authenticatedDevelopment: false, currentUser, uid: prefix => `${prefix}-${crypto.randomUUID()}`, visibleNotifications: notifications,
     mode: 'internal', canAuthorize: rows('user_roles').some(r => r["role"] === 'finance'), sharedTotals: query.data.sharedTotals,
     submitExpense: async (e, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
     decide: (id, decision, comment) => mutate('decision', { id, decision, comment }),

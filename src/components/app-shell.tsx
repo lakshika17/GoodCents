@@ -64,7 +64,7 @@ function Brand() {
 }
 
 function RoleSwitcher() {
-  const { role, preview, setPreview, currentUser, mode } = useStore();
+  const { role, preview, setPreview, currentUser, mode, authenticatedDevelopment } = useStore();
   const qc = useQueryClient();
   const navigate = useNavigate();
   if (mode === "internal") return <div className="flex items-center gap-2"><div className="text-right text-xs"><p className="font-medium">{currentUser.name}</p><p className="text-muted-foreground">{role === "admin" ? "Founder" : role === "manager" ? "Manager" : "Employee"}</p></div><Button variant="outline" size="sm" onClick={() => void navigate({ to: '/demo' })}>Demo preview</Button><Button variant="outline" size="sm" onClick={async () => { await qc.cancelQueries(); qc.clear(); await supabase.auth.signOut(); await navigate({ to: "/auth", replace: true }); }}>Sign out</Button></div>;
@@ -77,6 +77,7 @@ function RoleSwitcher() {
       <select aria-label="Fictional demo preview" className={cn(nativeSelect, 'max-w-44')} value={preview} onChange={event => { if (isDemoPreview(event.target.value)) setPreview(event.target.value); }}>
         {Object.entries(DEMO_PREVIEWS).map(([key, item]) => <option key={key} value={key}>{item.label} · Demo</option>)}
       </select>
+      {authenticatedDevelopment && <Button variant="outline" size="sm" onClick={async () => { await qc.cancelQueries(); qc.clear(); sessionStorage.removeItem('ai-cfo-demo'); await supabase.auth.signOut(); await navigate({ to: '/auth', replace: true }); }}>Sign out</Button>}
     </div>
   );
 }
