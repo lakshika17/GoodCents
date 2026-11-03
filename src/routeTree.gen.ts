@@ -15,6 +15,9 @@ import { Route as AssistantRouteImport } from './routes/assistant'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as NegotiatorRouteImport } from './routes/negotiator'
+import { Route as PeopleRouteImport } from './routes/people'
+import { Route as ReimbursementsRouteImport } from './routes/reimbursements'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TimeMachineRouteImport } from './routes/time-machine'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +50,21 @@ const NegotiatorRoute = NegotiatorRouteImport.update({
   path: '/negotiator',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PeopleRoute = PeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReimbursementsRoute = ReimbursementsRouteImport.update({
+  id: '/reimbursements',
+  path: '/reimbursements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TimeMachineRoute = TimeMachineRouteImport.update({
   id: '/time-machine',
   path: '/time-machine',
@@ -60,6 +78,9 @@ export interface FileRoutesByFullPath {
   '/budgets': typeof BudgetsRoute
   '/expenses': typeof ExpensesRoute
   '/negotiator': typeof NegotiatorRoute
+  '/people': typeof PeopleRoute
+  '/reimbursements': typeof ReimbursementsRoute
+  '/settings': typeof SettingsRoute
   '/time-machine': typeof TimeMachineRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +90,9 @@ export interface FileRoutesByTo {
   '/budgets': typeof BudgetsRoute
   '/expenses': typeof ExpensesRoute
   '/negotiator': typeof NegotiatorRoute
+  '/people': typeof PeopleRoute
+  '/reimbursements': typeof ReimbursementsRoute
+  '/settings': typeof SettingsRoute
   '/time-machine': typeof TimeMachineRoute
 }
 export interface FileRoutesById {
@@ -79,6 +103,9 @@ export interface FileRoutesById {
   '/budgets': typeof BudgetsRoute
   '/expenses': typeof ExpensesRoute
   '/negotiator': typeof NegotiatorRoute
+  '/people': typeof PeopleRoute
+  '/reimbursements': typeof ReimbursementsRoute
+  '/settings': typeof SettingsRoute
   '/time-machine': typeof TimeMachineRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +117,9 @@ export interface FileRouteTypes {
     | '/budgets'
     | '/expenses'
     | '/negotiator'
+    | '/people'
+    | '/reimbursements'
+    | '/settings'
     | '/time-machine'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +129,9 @@ export interface FileRouteTypes {
     | '/budgets'
     | '/expenses'
     | '/negotiator'
+    | '/people'
+    | '/reimbursements'
+    | '/settings'
     | '/time-machine'
   id:
     | '__root__'
@@ -108,6 +141,9 @@ export interface FileRouteTypes {
     | '/budgets'
     | '/expenses'
     | '/negotiator'
+    | '/people'
+    | '/reimbursements'
+    | '/settings'
     | '/time-machine'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +154,9 @@ export interface RootRouteChildren {
   BudgetsRoute: typeof BudgetsRoute
   ExpensesRoute: typeof ExpensesRoute
   NegotiatorRoute: typeof NegotiatorRoute
+  PeopleRoute: typeof PeopleRoute
+  ReimbursementsRoute: typeof ReimbursementsRoute
+  SettingsRoute: typeof SettingsRoute
   TimeMachineRoute: typeof TimeMachineRoute
 }
 
@@ -165,6 +204,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NegotiatorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reimbursements': {
+      id: '/reimbursements'
+      path: '/reimbursements'
+      fullPath: '/reimbursements'
+      preLoaderRoute: typeof ReimbursementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/time-machine': {
       id: '/time-machine'
       path: '/time-machine'
@@ -182,6 +242,9 @@ const rootRouteChildren: RootRouteChildren = {
   BudgetsRoute: BudgetsRoute,
   ExpensesRoute: ExpensesRoute,
   NegotiatorRoute: NegotiatorRoute,
+  PeopleRoute: PeopleRoute,
+  ReimbursementsRoute: ReimbursementsRoute,
+  SettingsRoute: SettingsRoute,
   TimeMachineRoute: TimeMachineRoute,
 }
 export const routeTree = rootRouteImport
