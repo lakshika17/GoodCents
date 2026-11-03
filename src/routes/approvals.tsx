@@ -73,11 +73,11 @@ function ReviewCard({ e }: { e: Expense }) {
     <Panel className="min-w-0">
       <div className="grid gap-5 md:grid-cols-[200px_minmax(0,1fr)]">
         <div className="grid aspect-[3/4] place-items-center overflow-hidden rounded-lg border bg-muted text-xs text-muted-foreground">
-          {receipt?.previewUrl ? <img src={receipt.previewUrl} alt="Receipt" className="h-full w-full object-cover" /> : receipt ? <span className="grid justify-items-center gap-2 p-3 text-center"><FileImage className="h-6 w-6" />{receipt.fileName}<span>Preview unavailable in demo</span></span> : <span className="grid justify-items-center gap-2"><AlertTriangle className="h-5 w-5 text-warning" />No receipt</span>}
+          {receipt?.previewUrl && receipt.fileType === "application/pdf" ? <object data={receipt.previewUrl} type="application/pdf" aria-label={`Preview of ${receipt.fileName}`} className="h-full w-full"><span className="grid h-full place-items-center p-3 text-center">PDF preview unavailable. <a className="text-primary underline" href={receipt.previewUrl} target="_blank" rel="noreferrer">Open PDF</a></span></object> : receipt?.previewUrl ? <img src={receipt.previewUrl} alt="Receipt" className="h-full w-full object-cover" /> : receipt ? <span className="grid justify-items-center gap-2 p-3 text-center"><FileImage className="h-6 w-6" />{receipt.fileName}<span>Preview unavailable for this file</span></span> : <span className="grid justify-items-center gap-2"><AlertTriangle className="h-5 w-5 text-warning" />No receipt</span>}
         </div>
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div><h2 className="text-xl font-semibold">{e.vendor}</h2><p className="text-sm text-muted-foreground">{e.description}</p></div>
+            <div><h2 className="text-xl font-semibold">{e.vendor}</h2><p className="text-sm text-muted-foreground">{e.description}</p>{e.documentType && <p className="mt-1 text-xs text-muted-foreground">{e.documentType}{e.verified === false ? " · not verified" : e.verified ? " · verified by submitter" : ""}</p>}</div>
             <p className="font-display text-2xl font-semibold">{money(e.amount, 2)}</p>
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
