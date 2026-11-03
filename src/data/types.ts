@@ -43,6 +43,6 @@ export interface FinancialScenario { id: string; name: string; amount: number; b
 export type NotificationType =
   | "expense_submitted" | "missing_info" | "approval_requested" | "expense_approved"
   | "changes_requested" | "reimbursement_initiated" | "payment_completed" | "payment_failed" | "budget_threshold";
-export interface AppNotification { id: string; type: NotificationType; message: string; date: string; read: boolean; audience: Role[]; employeeId?: string }
+export interface AppNotification { id: string; type: NotificationType; message: string; date: string; read: boolean; audience: Role[]; employeeId?: string | undefined }
 
 export interface ApprovalPolicy { autoFlagAbove: number; receiptRequiredAbove: number; duplicateWindowDays: number; restrictedCategories: Category[]; budgetAlertPercent: number }

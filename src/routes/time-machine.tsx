@@ -29,7 +29,7 @@ function TimeMachine() {
     const later = projectScenario({ balance, dailyBurn, amount, strategy: "next_month", splitParts: 1 });
     const split = projectScenario({ balance, dailyBurn, amount, strategy: "split", splitParts: parts });
     const base = projectScenario({ balance, dailyBurn, amount: 0, strategy: "now", splitParts: 1 });
-    const data = now.map((p, i) => ({ day: p.day, "Buy now": p.balance, "Next month": later[i].balance, [`Split ×${parts}`]: split[i].balance, "No purchase": base[i].balance }));
+    const data = now.map((p, i) => ({ day: p.day, "Buy now": p.balance, "Next month": later[i]!.balance, [`Split ×${parts}`]: split[i]!.balance, "No purchase": base[i]!.balance }));
     const rows = [["Buy now", now], ["Next month", later], [`Split ×${parts}`, split]] as const;
     return { balance, dailyBurn, data, rows };
   }, [b, expenses, amount, parts]);

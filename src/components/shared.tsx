@@ -32,7 +32,7 @@ export function Panel({ title, children, className, action }: { title?: string; 
   );
 }
 
-export function Kpi({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "primary" }) {
+export function Kpi({ label, value, hint, tone }: { label: string; value: string; hint?: string | undefined; tone?: "primary" }) {
   return (
     <div className={cn("rounded-xl border bg-card p-4", tone === "primary" && "border-primary/20 bg-accent")}>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>

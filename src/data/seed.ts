@@ -82,7 +82,7 @@ function buildExpenses(): { expenses: Expense[]; receipts: Receipt[] } {
     for (const [empId, cfg] of Object.entries(empBudget)) {
       const count = 1 + Math.floor(r() * 2);
       for (let i = 0; i < count; i++) {
-        const cat = cfg.cats[Math.floor(r() * cfg.cats.length)];
+        const cat = cfg.cats[Math.floor(r() * cfg.cats.length)]!;
         const vendors = vendorsByCat[cat];
         const [lo, hi] = ranges[cat];
         const amount = Math.round((lo + r() * (hi - lo)) * 100) / 100;
@@ -95,7 +95,7 @@ function buildExpenses(): { expenses: Expense[]; receipts: Receipt[] } {
         const hasReceipt = r() > 0.12;
         if (hasReceipt) receipts.push({ id: `r-${id}`, fileName: `receipt-${id}.jpg`, fileType: "image/jpeg", previewUrl: null, extractionSimulated: true });
         expenses.push({
-          id, employeeId: empId, vendor: vendors[Math.floor(r() * vendors.length)], amount, date: `${month}-${day}`,
+          id, employeeId: empId, vendor: vendors[Math.floor(r() * vendors.length)]!, amount, date: `${month}-${day}`,
           category: cat, departmentId: b.departmentId, projectId: b.projectId, description: `${cat} purchase`,
           receiptId: hasReceipt ? `r-${id}` : null, approvalStatus: status, submittedAt: `${month}-${day}`,
         });

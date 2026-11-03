@@ -38,7 +38,7 @@ function EmployeesTab() {
   const name = (id: string | null) => employees.find((e) => e.id === id)?.name ?? "—";
   return (
     <Panel className="p-0" >
-      <div className="flex justify-end border-b p-3"><Button size="sm" onClick={() => setEdit({ id: uid("e"), name: "", email: "", title: "", role: "employee", departmentId: departments[0].id, managerId: null })}><Plus className="h-4 w-4" />Add employee</Button></div>
+      <div className="flex justify-end border-b p-3"><Button size="sm" onClick={() => setEdit({ id: uid("e"), name: "", email: "", title: "", role: "employee", departmentId: departments[0]!.id, managerId: null })}><Plus className="h-4 w-4" />Add employee</Button></div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-xs text-muted-foreground"><tr className="border-b"><th className="px-5 py-2.5 font-medium">Name</th><th className="px-3 font-medium">Department</th><th className="px-3 font-medium">Role</th><th className="px-3 font-medium">Manager</th><th className="px-5" /></tr></thead>

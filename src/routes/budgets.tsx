@@ -26,7 +26,7 @@ function Budgets() {
   const canEdit = role === "admin";
   const chart = visible.map((b) => ({ name: b.name.split(" ")[0], Budget: b.amount, Actual: Math.round(budgetSpent(b, expenses)) }));
 
-  const blank = (): Budget => ({ id: uid("b"), name: "", departmentId: departments[0].id, projectId: null, ownerId: employees[0].id, amount: 0, period: "H2 2026", history: [] });
+  const blank = (): Budget => ({ id: uid("b"), name: "", departmentId: departments[0]!.id, projectId: null, ownerId: employees[0]!.id, amount: 0, period: "H2 2026", history: [] });
 
   return (
     <>
