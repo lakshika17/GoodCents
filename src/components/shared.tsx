@@ -68,7 +68,7 @@ export const ReimbursementBadge = ({ s }: { s: ReimbursementStatus }) => <Pill t
 
 export function DemoBadge({ children }: { children?: ReactNode }) {
   const { mode } = useStore();
-  return <Pill tone="primary"><FlaskConical className="h-3 w-3" />{children ?? (mode === "demo" ? "Demo data" : "Authorized records")}</Pill>;
+  return <Pill tone="primary"><FlaskConical className="h-3 w-3" />{children ?? (mode === "demo" ? "Sample data" : "Authorized records")}</Pill>;
 }
 export function NotConnected({ children }: { children: ReactNode }) {
   return (

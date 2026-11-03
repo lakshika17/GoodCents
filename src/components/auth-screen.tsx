@@ -39,7 +39,7 @@ export function AuthScreen() {
         <Button variant="ghost" type="button" disabled={!email || busy} onClick={async () => { const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` }); setMessage(error ? error.message : 'If your account exists, a reset link has been sent.'); }}>Forgot password?</Button>
       </form>
       <div className="grid gap-2"><Button variant="outline" onClick={() => void social('google')}>Sign in with Google</Button><Button className="lovable-auth-button" onClick={() => void social('lovable')}>Sign in with Lovable</Button></div>
-      <Button variant="link" className="w-full" onClick={() => void navigate({ to: '/demo' })}>Open fictional hackathon demo</Button>
+      <Button variant="link" className="w-full" onClick={() => void navigate({ to: '/demo' })}>Open sample-data hackathon demo</Button>
     </div>
   </main>;
 }

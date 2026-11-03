@@ -22,7 +22,6 @@ interface State {
   budgets: Budget[]; expenses: Expense[]; receipts: Receipt[]; approvals: Approval[]; reimbursements: Reimbursement[];
   notifications: AppNotification[]; policy: ApprovalPolicy;
 }
-const DEMO_USERS: Record<Role, string> = { employee: "e-sam", manager: "e-maya", admin: "e-priya" };
 const today = () => seed.DEMO_TODAY;
 let idc = 1000;
 const uid = (p: string) => `${p}-${++idc}`;
@@ -51,13 +50,13 @@ function useStoreValue() {
   const submitExpense = useCallback((e: Omit<Expense, "id" | "approvalStatus" | "submittedAt" | "employeeId" | "receiptId">, receipt?: Omit<Receipt, "id">) => {
     set((st) => {
       const receiptId = receipt ? uid("r") : null;
-      const exp: Expense = { ...e, id: uid("x"), employeeId: DEMO_USERS[role], receiptId, approvalStatus: "pending", submittedAt: today() };
+      const exp: Expense = { ...e, id: uid("x"), employeeId: currentUser.id, receiptId, approvalStatus: "pending", submittedAt: today() };
       let next: State = { ...st, expenses: [exp, ...st.expenses], receipts: receipt ? [{ ...receipt, id: receiptId ?? uid("r") }, ...st.receipts] : st.receipts };
       next = notify(next, "expense_submitted", `Expense submitted: ${e.vendor} $${e.amount.toFixed(2)}`, ["employee"], exp.employeeId);
       next = notify(next, "approval_requested", `New expense awaiting approval: ${e.vendor}`, ["manager"]);
       return next;
     });
-  }, [role]);
+  }, [currentUser.id]);
 
   const decide = useCallback((expenseId: string, decision: Approval["decision"], comment: string) => {
     set((st) => {
@@ -66,7 +65,7 @@ function useStoreValue() {
       let next: State = {
         ...st,
         expenses: st.expenses.map((e) => (e.id === expenseId ? { ...e, approvalStatus: decision } : e)),
-        approvals: [{ id: uid("a"), expenseId, managerId: DEMO_USERS[role], decision, comment, date: today() }, ...st.approvals],
+        approvals: [{ id: uid("a"), expenseId, managerId: currentUser.id, decision, comment, date: today() }, ...st.approvals],
       };
       if (decision === "approved") {
         next.reimbursements = [{ id: uid("rb"), expenseId, employeeId: exp.employeeId, amount: exp.amount, status: "awaiting_authorization", paypalReference: null, authorizedBy: null, history: [{ date: today(), status: "awaiting_authorization", note: "Created on approval" }] }, ...next.reimbursements];
@@ -75,7 +74,7 @@ function useStoreValue() {
       next = notify(next, decision === "changes_requested" ? "changes_requested" : "expense_approved", `Your ${exp.vendor} expense was ${msg}${comment ? `: “${comment}”` : ""}`, ["employee"], exp.employeeId);
       return next;
     });
-  }, [role]);
+  }, [currentUser.id]);
 
   const respondToChanges = useCallback((expenseId: string, response: string, patch: Partial<Expense>) => {
     set((st) => ({
@@ -91,12 +90,12 @@ function useStoreValue() {
       if (!rb) return st;
       let next: State = {
         ...st,
-        reimbursements: st.reimbursements.map((r) => r.id === id ? { ...r, status, authorizedBy: r.authorizedBy ?? (status === "queued" ? DEMO_USERS[role] : null), history: [...r.history, { date: today(), status, note }] } : r),
+        reimbursements: st.reimbursements.map((r) => r.id === id ? { ...r, status, authorizedBy: r.authorizedBy ?? (status === "queued" ? currentUser.id : null), history: [...r.history, { date: today(), status, note }] } : r),
       };
       if (status === "queued") next = notify(next, "reimbursement_initiated", `Reimbursement authorized and queued (demo) — $${rb.amount.toFixed(2)}`, ["employee", "admin"], rb.employeeId);
       return next;
     });
-  }, [role]);
+  }, [currentUser.id]);
 
   const upsertBudget = useCallback((b: Budget) => set((st) => {
     const exists = st.budgets.some((x) => x.id === b.id);
