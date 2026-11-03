@@ -22,14 +22,18 @@ export interface Expense {
   category: Category; departmentId: string; projectId: string | null; description: string;
   receiptId: string | null; approvalStatus: ApprovalStatus; submittedAt: string;
   documentType?: DocumentType | undefined; verified?: boolean | undefined;
+  currency?: string | undefined; source?: DetailSource | undefined;
 }
 export interface Receipt { id: string; fileName: string; fileType: string; previewUrl: string | null; extractionSimulated: boolean; storagePath?: string | undefined }
+
+/** How a document's details were obtained. */
+export type DetailSource = "ai" | "ai_corrected" | "manual";
 
 /** Uploaded documents kept outside spending: quotes, orders, customer documents, drafts and voided items. */
 export interface SavedDocument {
   id: string; employeeId: string; documentType: DocumentType; status: DocumentStatus;
   vendor: string; amount: number | null; date: string; category: Category; departmentId: string; projectId: string | null;
-  description: string; verified: boolean; fileName: string | null; fileType: string | null; previewUrl: string | null; createdAt: string;
+  description: string; verified: boolean; currency: string; source: DetailSource; documentNumber: string; fileName: string | null; fileType: string | null; previewUrl: string | null; createdAt: string;
 }
 
 export interface Approval {

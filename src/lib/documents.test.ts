@@ -18,6 +18,7 @@ describe("document eligibility", () => {
     expect(canSubmitForApproval({ ...ok, documentType: "Paid Receipt", verified: false })).toBe(false);
     expect(canSubmitForApproval({ ...ok, documentType: "Paid Receipt", amount: null })).toBe(false);
     expect(canSubmitForApproval({ ...ok, documentType: "Paid Receipt" })).toBe(true);
+    expect(canSubmitForApproval({ ...ok, documentType: "Paid Receipt", currency: "EUR" })).toBe(false);
   });
   it("never recommends approving unverified details", () => {
     const e: Expense = { id: "x", employeeId: "EMP-005", vendor: "V", amount: 10, date: "2026-10-07", category: "Office", departmentId: "DEP-005", projectId: null, description: "", receiptId: null, approvalStatus: "pending", submittedAt: "", verified: false };

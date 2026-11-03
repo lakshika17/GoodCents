@@ -18,6 +18,7 @@ export const isDocumentType = (v: unknown): v is DocumentType => DOCUMENT_TYPES.
 export type DocumentStatus = "draft" | "saved" | "void";
 
 /** Whether the document may be submitted for expense approval right now. */
-export function canSubmitForApproval(d: { documentType: DocumentType | ""; vendor: string; amount: number | null; date: string; verified: boolean }) {
-  return isExpenseEligible(d.documentType) && d.verified && !!d.vendor.trim() && d.amount !== null && d.amount > 0 && !!d.date;
+/** Budgets are in USD, so only USD documents can enter approval until currency conversion exists. */
+export function canSubmitForApproval(d: { documentType: DocumentType | ""; vendor: string; amount: number | null; date: string; verified: boolean; currency?: string }) {
+  return (d.currency ?? "USD") === "USD" && isExpenseEligible(d.documentType) && d.verified && !!d.vendor.trim() && d.amount !== null && d.amount > 0 && !!d.date;
 }

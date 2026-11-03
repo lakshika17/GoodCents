@@ -1,22 +1,29 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, FileText, FileUp, Keyboard, MessageCircle } from "lucide-react";
+import { Camera, FileText, FileUp, Keyboard, Loader2, MessageCircle, Sparkles } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { readDocument } from "@/data/extraction.functions";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStore } from "@/data/store";
-import { CATEGORIES, type Category } from "@/data/types";
+import { CATEGORIES, type Category, type DetailSource } from "@/data/types";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_TODAY } from "@/data/seed";
 import { DOCUMENT_TYPES, canSubmitForApproval, isDocumentType, isExpenseEligible, type DocumentType } from "@/lib/documents";
 import { Field, NotConnected, nativeSelect } from "./shared";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
-const blank = (departmentId: string) => ({ documentType: "" as DocumentType | "", vendor: "", amount: "", date: "", category: "Office" as Category, departmentId, projectId: "", description: "" });
+const blank = (departmentId: string) => ({ documentType: "" as DocumentType | "", vendor: "", amount: "", currency: "USD", documentNumber: "", date: "", category: "Office" as Category, departmentId, projectId: "", description: "" });
 
 export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode } = useStore();
+  const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode, authenticatedDevelopment } = useStore();
+  const read = useServerFn(readDocument);
+  const aiAvailable = mode === "internal" || authenticatedDevelopment;
+  const [reading, setReading] = useState(false);
+  const [readNote, setReadNote] = useState("");
+  const [source, setSource] = useState<DetailSource>("manual");
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [pdfFailed, setPdfFailed] = useState(false);
@@ -26,7 +33,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const camRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setForm(blank(currentUser.departmentId)); }
+    if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setForm(blank(currentUser.departmentId)); setSource("manual"); setReadNote(""); }
   }, [open, currentUser.departmentId]);
 
   // Never pre-fill fields: automatic document reading is not connected, so every value is entered by a person.
@@ -35,20 +42,40 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
     if (!ACCEPT.split(",").includes(f.type)) { toast.error("Please upload a JPG, PNG, or PDF document"); return; }
     setFile(f); setPdfFailed(false); setVerified(false);
     setFileUrl(URL.createObjectURL(f));
+    setSource("manual"); setReadNote("");
+    if (aiAvailable) void runRead(f);
   };
-  const update = (patch: Partial<typeof form>) => { setForm((s) => ({ ...s, ...patch })); setVerified(false); };
+  const runRead = async (f: File) => {
+    if (f.size > 10 * 1024 * 1024) { setReadNote("File is over 10 MB, so it can't be read automatically. Enter details manually."); return; }
+    setReading(true);
+    try {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const res = await read({ data: { fileName: f.name, mimeType: f.type as "application/pdf", base64: btoa(bin) } });
+      if (!res.ok) { setReadNote(res.error); return; }
+      const d = res.data;
+      setForm((s) => ({ ...s,
+        documentType: d.documentType ?? s.documentType, vendor: d.counterparty ?? "", amount: d.amount != null ? String(d.amount) : "",
+        currency: d.currency ?? "USD", date: d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : "", documentNumber: d.documentNumber ?? "",
+      }));
+      setSource("ai");
+      setReadNote(d.notes ? `Read by AI — check every field. ${d.notes}` : "Read by AI — check every field against the document.");
+    } catch { setReadNote("Automatic reading failed. Enter the details manually."); }
+    finally { setReading(false); }
+  };
+  const update = (patch: Partial<typeof form>) => { setForm((s) => ({ ...s, ...patch })); setVerified(false); setSource((x) => (x === "ai" ? "ai_corrected" : x)); };
 
   const projectOptions = projects.filter((p) => projectDepartments.some((pd) => pd.projectId === p.id && pd.departmentId === form.departmentId));
   const amount = form.amount === "" ? null : parseFloat(form.amount);
   const eligible = isExpenseEligible(form.documentType);
   const complete = !!form.vendor.trim() && amount !== null && amount > 0 && !!form.date;
-  const canSubmit = canSubmitForApproval({ documentType: form.documentType, vendor: form.vendor, amount, date: form.date, verified });
+  const canSubmit = canSubmitForApproval({ documentType: form.documentType, vendor: form.vendor, amount, date: form.date, verified, currency: form.currency });
   const canSaveDocument = !!form.documentType && !eligible && complete && verified;
   const isPdf = file?.type === "application/pdf";
 
   const record = (status: "draft" | "saved") => {
     if (!form.documentType) return;
-    saveDocument({ documentType: form.documentType, status, vendor: form.vendor.trim(), amount: amount && amount > 0 ? amount : null, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, verified, fileName: file?.name ?? null, fileType: file?.type ?? null, previewUrl: fileUrl });
+    saveDocument({ documentType: form.documentType, status, vendor: form.vendor.trim(), amount: amount && amount > 0 ? amount : null, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, verified, currency: form.currency, source, documentNumber: form.documentNumber, fileName: file?.name ?? null, fileType: file?.type ?? null, previewUrl: fileUrl });
     if (mode === "demo") { toast.success(status === "draft" ? "Saved as draft — no approval requested" : `${form.documentType} saved — not counted as spending`); onOpenChange(false); }
   };
 
@@ -64,7 +91,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
       if (uploaded.error) { toast.error(uploaded.error.message); return; }
     }
     await submitExpense(
-      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, documentType: form.documentType, verified },
+      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, documentType: form.documentType, verified, currency: form.currency, source },
       file ? { fileName: file.name, fileType: file.type, previewUrl: file.type.startsWith("image/") || isPdf ? fileUrl : null, extractionSimulated: false, storagePath } : undefined,
     );
     toast.success(mode === "demo" ? "Expense submitted for approval (demo)" : "Expense submitted for approval");
@@ -102,7 +129,9 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
               <Button variant="outline" size="sm" onClick={() => camRef.current?.click()}><Camera className="h-4 w-4" />Camera</Button>
               <Button variant="outline" size="sm" onClick={() => { setFile(null); setFileUrl(null); setVerified(false); }}><Keyboard className="h-4 w-4" />Type manually</Button>
             </div>
-            <NotConnected>Automatic reading of documents is not connected. Fields stay blank — enter them from the document.</NotConnected>
+            {aiAvailable
+              ? <p className="rounded-lg border px-3 py-2 text-xs text-muted-foreground">{reading ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Reading document with AI…</span> : readNote || "Uploaded documents are read with AI. You check and correct every field before saving."}</p>
+              : <NotConnected>Automatic reading needs a verified sign-in and is off in this sample demo. Fields stay blank — enter them from the document.</NotConnected>}
             <NotConnected><MessageCircle className="mr-1 inline h-3 w-3" />WhatsApp, Google Chat and SMS submission are planned and not connected yet.</NotConnected>
           </div>
           <div className="grid content-start gap-3">
@@ -112,14 +141,19 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
                 {DOCUMENT_TYPES.map((t) => <option key={t}>{t}</option>)}
               </select>
             </Field>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles className="h-3.5 w-3.5 text-primary" />Details: {source === "ai" ? "AI-extracted" : source === "ai_corrected" ? "AI-extracted, corrected by you" : "Manually entered"} · {verified ? "verified" : "unverified"}</p>
             {form.documentType && (
               <p className="rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground">
-                {eligible ? "This can be submitted for expense approval once verified." : `${form.documentType}s are saved separately. They never enter the approval queue or count toward spending or reimbursements.`}
+                {eligible ? (form.currency === "USD" ? "This can be submitted for expense approval once verified." : "Only USD documents can be submitted for approval right now; save non-USD documents as a draft.") : `${form.documentType}s are saved separately. They never enter the approval queue or count toward spending or reimbursements.`}
               </p>
             )}
             <Field label={eligible || !form.documentType ? "Vendor" : "Company / vendor"}><Input value={form.vendor} onChange={(e) => update({ vendor: e.target.value })} placeholder="As shown on the document" /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Amount (USD)"><Input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => update({ amount: e.target.value })} /></Field>
+              <Field label="Amount"><Input type="number" min="0" step="0.001" value={form.amount} onChange={(e) => update({ amount: e.target.value })} /></Field>
+              <Field label="Currency"><Input maxLength={3} value={form.currency} onChange={(e) => update({ currency: e.target.value.toUpperCase() })} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Document number"><Input value={form.documentNumber} onChange={(e) => update({ documentNumber: e.target.value })} placeholder="Optional" /></Field>
               <Field label="Document date"><Input type="date" value={form.date} onChange={(e) => update({ date: e.target.value })} /></Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -142,7 +176,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
             </Field>
             <Field label="Note (optional)"><Input value={form.description} onChange={(e) => update({ description: e.target.value })} /></Field>
             <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-              <Checkbox checked={verified} disabled={!complete || !form.documentType} onCheckedChange={(v) => setVerified(v === true)} aria-label="I verified these details" />
+              <Checkbox checked={verified} disabled={!complete || !form.documentType || reading} onCheckedChange={(v) => setVerified(v === true)} aria-label="I verified these details" />
               <span>I checked the type, vendor, amount and date against the document.{(!complete || !form.documentType) && <span className="block text-xs text-muted-foreground">Fill in the type, vendor, amount and date first.</span>}</span>
             </label>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">

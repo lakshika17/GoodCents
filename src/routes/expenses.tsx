@@ -75,7 +75,7 @@ function SavedDocuments() {
   const visible = documents.filter((d) => role === "admin" || d.employeeId === currentUser.id);
   const submitDraft = async (d: SavedDocument) => {
     if (!d.amount || !canSubmitForApproval({ ...d, amount: d.amount })) { toast.error("Open a new upload to finish and verify this draft before submitting."); return; }
-    await submitExpense({ vendor: d.vendor, amount: d.amount, date: d.date, category: d.category, departmentId: d.departmentId, projectId: d.projectId, description: d.description, documentType: d.documentType, verified: d.verified }, d.fileName && d.fileType ? { fileName: d.fileName, fileType: d.fileType, previewUrl: d.previewUrl, extractionSimulated: false } : undefined);
+    await submitExpense({ vendor: d.vendor, amount: d.amount, date: d.date, category: d.category, departmentId: d.departmentId, projectId: d.projectId, description: d.description, documentType: d.documentType, verified: d.verified, currency: d.currency, source: d.source }, d.fileName && d.fileType ? { fileName: d.fileName, fileType: d.fileType, previewUrl: d.previewUrl, extractionSimulated: false } : undefined);
     voidDocument(d.id);
     toast.success("Draft submitted for approval");
   };
@@ -84,15 +84,16 @@ function SavedDocuments() {
       <p className="border-b px-5 py-3 text-xs text-muted-foreground">Drafts, quotes, purchase orders, customer documents and voided items. None of these count toward spending or reimbursements.{mode === "internal" && " Saving these to company records is not available yet."}</p>
       {visible.length === 0 ? <p className="px-5 py-6 text-sm text-muted-foreground">No saved documents yet.</p> : (
         <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead className="text-left text-xs text-muted-foreground"><tr className="border-b"><th className="px-5 py-2.5 font-medium">Date</th><th className="px-3 font-medium">Type</th><th className="px-3 font-medium">Vendor</th><th className="px-3 font-medium">Status</th><th className="px-3 font-medium">File</th><th className="px-3 text-right font-medium">Amount</th><th className="px-5" /></tr></thead>
+          <thead className="text-left text-xs text-muted-foreground"><tr className="border-b"><th className="px-5 py-2.5 font-medium">Date</th><th className="px-3 font-medium">Type</th><th className="px-3 font-medium">Vendor / customer</th><th className="px-3 font-medium">Details</th><th className="px-3 font-medium">Status</th><th className="px-3 font-medium">File</th><th className="px-3 text-right font-medium">Amount</th><th className="px-5" /></tr></thead>
           <tbody>{visible.map((d) => (
             <tr key={d.id} className="border-b last:border-0">
               <td className="whitespace-nowrap px-5 py-2.5 text-muted-foreground">{d.date || "—"}</td>
               <td className="whitespace-nowrap px-3">{d.documentType}</td>
-              <td className="px-3 font-medium">{d.vendor || "—"}</td>
+              <td className="px-3 font-medium">{d.vendor || "—"}{d.documentNumber && <span className="block text-xs font-normal text-muted-foreground">{d.documentNumber}</span>}</td>
+              <td className="whitespace-nowrap px-3 text-xs text-muted-foreground">{d.source === "ai" ? "AI-extracted" : d.source === "ai_corrected" ? "AI, corrected" : "Manual"}</td>
               <td className="px-3 capitalize text-muted-foreground">{d.status}{d.status !== "void" && !d.verified ? " · unverified" : ""}</td>
               <td className="px-3">{d.previewUrl ? <a className="text-primary hover:underline" href={d.previewUrl} target="_blank" rel="noreferrer">{d.fileName}</a> : <span className="text-muted-foreground">{d.fileName ?? "—"}</span>}</td>
-              <td className="px-3 text-right tabular-nums">{d.amount ? money(d.amount, 2) : "—"}</td>
+              <td className="px-3 text-right tabular-nums">{d.amount ? `${d.amount.toLocaleString("en-US", { maximumFractionDigits: 3 })} ${d.currency}` : "—"}</td>
               <td className="whitespace-nowrap px-5 text-right">{d.status === "draft" && d.employeeId === currentUser.id && <span className="flex justify-end gap-2">
                 {(d.documentType === "Paid Receipt" || d.documentType === "Supplier Invoice") && <Button size="sm" variant="outline" onClick={() => void submitDraft(d)}>Submit</Button>}
                 <Button size="sm" variant="ghost" className="text-destructive" onClick={() => voidDocument(d.id)}>Void</Button></span>}
