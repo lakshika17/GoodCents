@@ -1,4 +1,5 @@
 # Quantera internal access update
+- [ ] Replace demo/development team references with all five exact workbook employees, default to Lakshika, preserve sample financial math and authentication, and inspect all ten screens.
 - [x] Explain how to invite Zichen as project Editor without ownership transfer or company-data access.
 - [x] Deliver beginner-friendly current-interface guide, readiness checklist, integration responsibilities, and pre-upload verification requirements.
 - [x] Add clearly labeled fictional Developer/Admin, Employee, Manager, Finance, and Terry previews without changing the design or ten sections.
