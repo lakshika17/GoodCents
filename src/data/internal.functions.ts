@@ -6,6 +6,14 @@ import { actionSchema } from './action-schema';
 import type { Json } from '@/integrations/supabase/types';
 const id = z.string().trim().min(1).max(100);
 
+export const loadDeveloperAccess = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const { data: identity, error: authError } = await context.supabase.auth.getUser();
+  if (authError || !identity.user?.email_confirmed_at || !identity.user.email) return { authorized: false };
+  const { data, error } = await context.supabase.from('developer_roles').select('email,role').eq('email', identity.user.email.toLowerCase()).eq('active', true).maybeSingle();
+  if (error) throw new Error(error.message);
+  return { authorized: data?.role === 'admin' };
+});
+
 export const loadInternal = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   const db = context.supabase;
   const { data: profile, error } = await db.from('profiles').select('*').eq('id', context.userId).single();

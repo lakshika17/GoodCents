@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { loadInternal, performInternal } from "./internal.functions";
+import { loadDeveloperAccess, loadInternal, performInternal } from "./internal.functions";
 import { actionSchema } from "./action-schema";
 import { DEMO_PREVIEWS, isDemoPreview, type DemoPreview } from './demo-preview';
 import { AuthScreen } from "@/components/auth-screen";
@@ -149,6 +149,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   if (!ready) return <p className="p-6 text-muted-foreground">Loading…</p>;
   if (demo) return <DemoProvider>{children}</DemoProvider>;
   if (!signedIn) return <AuthScreen />;
+  return <SignedInProvider>{children}</SignedInProvider>;
+}
+function SignedInProvider({ children }: { children: ReactNode }) {
+  const loadAccess = useServerFn(loadDeveloperAccess);
+  const access = useQuery({ queryKey: ['developer-access'], queryFn: () => loadAccess(), retry: false });
+  if (access.isPending) return <p className="p-6 text-muted-foreground">Checking verified access…</p>;
+  if (access.error) return <div className="p-6"><p role="alert">Development access could not be verified.</p><Button onClick={() => void supabase.auth.signOut()}>Sign out</Button></div>;
+  if (access.data?.authorized) return <DemoProvider>{children}</DemoProvider>;
   return <InternalProvider>{children}</InternalProvider>;
 }
 function InternalProvider({ children }: { children: ReactNode }) {
