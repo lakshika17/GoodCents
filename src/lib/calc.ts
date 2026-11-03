@@ -43,6 +43,7 @@ export function policyIssues(e: Expense, p: ApprovalPolicy) {
 export type Recommendation = { action: "approve" | "review" | "reject"; reasons: string[] };
 export function recommend(e: Expense, opts: { duplicate: boolean; issues: string[]; available: number }): Recommendation {
   const reasons: string[] = [];
+  if (e.verified === false) reasons.push("Details have not been verified against the uploaded document.");
   if (opts.duplicate) reasons.push("Matches an earlier expense with the same vendor and amount.");
   if (e.amount > opts.available) reasons.push("Exceeds remaining budget.");
   reasons.push(...opts.issues);
