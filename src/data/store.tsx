@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, useEffect, type ReactNode } from "react";
+import { isPublicPath } from "@/lib/utils";
 import * as seed from "./seed";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -169,7 +170,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
     return () => data.subscription.unsubscribe();
   }, []);
-  if (['/auth','/reset-password','/demo'].includes(path)) return <>{children}</>;
+  if (isPublicPath(path)) return <>{children}</>;
   if (!ready) return <p className="p-6 text-muted-foreground">Loading…</p>;
   if (demo) return <DemoProvider>{children}</DemoProvider>;
   if (!signedIn) return <AuthScreen />;
