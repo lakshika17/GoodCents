@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import type { ApprovalPolicy, Budget, Expense, Project } from './types';
+import type { Json } from '@/integrations/supabase/types';
 
 const id = z.string().trim().min(1).max(100);
 const amount = z.number().finite().positive().max(1e9);
@@ -24,11 +25,18 @@ export const loadInternal = createServerFn({ method: 'GET' }).middleware([requir
   if (error || !profile || !employeeId) throw new Error('Your account is not an active invited Quantera employee.');
   const tables = ['departments','employees','projects','project_departments','budgets','expenses','receipts','approvals','reimbursements','notifications','approval_policies','user_roles','access_requests','access_grants','audit_log'] as const;
   const results = await Promise.all(tables.map(async table => {
-    const rows: unknown[] = [];
+    const rows: Json[] = [];
     for (let offset = 0; ; offset += 1000) {
       const result = await db.from(table).select('*').range(offset, offset + 999);
       if (result.error) throw new Error(result.error.message);
-      rows.push(...(result.data ?? []));
+      if (table === 'receipts') {
+        for (const record of result.data ?? []) {
+          const receipt = record as { id: string; storage_path: string; data: Json };
+          const signed = await db.storage.from('private-receipts').createSignedUrl(receipt.storage_path, 300);
+          const fields = receipt.data && typeof receipt.data === 'object' && !Array.isArray(receipt.data) ? receipt.data : {};
+          rows.push({ ...receipt, data: { ...fields, previewUrl: signed.data?.signedUrl ?? null } });
+        }
+      } else rows.push(...(result.data ?? []) as Json[]);
       if ((result.data?.length ?? 0) < 1000) break;
     }
     return [table, rows] as const;
