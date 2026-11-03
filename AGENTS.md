@@ -16,4 +16,5 @@
 - Financial math lives in pure functions in `src/lib/calc.ts` with tests — dashboard, budgets and scenarios must agree.
 - Approval status and reimbursement status are separate fields; approved never implies paid.
 - Fictional preview personas are defined in a pure configuration module and only affect the in-memory demo provider; they never assign backend roles or grant access to company records.
+- Workbook directory fixtures live in a shared browser-safe module; sample spending tracks reference its employee and department IDs while preserving deterministic financial values independently of display names.
 - Development Admin authorization is owner-provisioned separately from employee roles and requires a revalidated, confirmed account; it opens the fictional provider only, never company finance permissions.

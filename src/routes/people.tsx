@@ -23,7 +23,7 @@ function People() {
   if (role !== "admin") return <Panel><p className="py-10 text-center text-sm text-muted-foreground">Switch to the Finance role to manage people and departments.</p></Panel>;
   return (
     <>
-      <PageHeader title="Employees & Departments" badge={<DemoBadge>Fictional people</DemoBadge>} />
+      <PageHeader title="Employees & Departments" badge={<DemoBadge>Quantera team · Sample finances</DemoBadge>} />
       <Tabs defaultValue="employees">
         <TabsList><TabsTrigger value="employees">Employees</TabsTrigger><TabsTrigger value="departments">Departments</TabsTrigger><TabsTrigger value="projects">Projects</TabsTrigger></TabsList>
         <TabsContent value="employees"><EmployeesTab /></TabsContent>
@@ -46,13 +46,13 @@ function EmployeesTab() {
           <thead className="text-left text-xs text-muted-foreground"><tr className="border-b"><th className="px-5 py-2.5 font-medium">Name</th><th className="px-3 font-medium">Department</th><th className="px-3 font-medium">Role</th><th className="px-3 font-medium">Manager</th><th className="px-5" /></tr></thead>
           <tbody>{employees.map((e) => (
             <tr key={e.id} className="border-b last:border-0">
-              <td className="px-5 py-2.5"><p className="font-medium">{e.name}</p><p className="text-xs text-muted-foreground">{e.title} · {e.email}</p></td>
+              <td className="px-5 py-2.5"><p className="font-medium">{e.name}</p><p className="text-xs text-muted-foreground">{e.id} · {e.title} · {e.email}</p></td>
               <td className="whitespace-nowrap px-3">{departments.find((d) => d.id === e.departmentId)?.name}</td>
-              <td className="px-3"><Pill tone={e.role === "admin" ? "primary" : e.role === "manager" ? "info" : "neutral"}>{e.role === "admin" ? "Finance" : e.role}</Pill></td>
+              <td className="px-3"><Pill tone={e.role === "admin" ? "primary" : e.role === "manager" ? "info" : "neutral"}>{e.role === "admin" ? "Founder" : e.role}</Pill></td>
               <td className="whitespace-nowrap px-3 text-muted-foreground">{name(e.managerId)}</td>
               <td className="whitespace-nowrap px-5 text-right">
                 <Button size="icon" variant="ghost" onClick={() => setEdit(e)} aria-label="Edit"><Pencil className="h-4 w-4" /></Button>
-                {!["e-sam", "e-maya", "e-priya"].includes(e.id) && <Button size="icon" variant="ghost" onClick={() => { removeEmployee(e.id); toast.success("Removed (demo)"); }} aria-label="Remove"><Trash2 className="h-4 w-4" /></Button>}
+                {!["EMP-001", "EMP-003", "EMP-005"].includes(e.id) && <Button size="icon" variant="ghost" onClick={() => { removeEmployee(e.id); toast.success("Removed (demo)"); }} aria-label="Remove"><Trash2 className="h-4 w-4" /></Button>}
               </td>
             </tr>
           ))}</tbody>

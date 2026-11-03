@@ -57,7 +57,7 @@ function Brand() {
       <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground"><Sparkles className="h-4 w-4" /></div>
       <div className="leading-tight">
         <p className="font-display text-sm font-semibold">AI CFO</p>
-        <p className="text-[11px] text-muted-foreground">{mode === "demo" ? "Hackathon · Fictional demo" : "Quantera · Internal"}</p>
+        <p className="text-[11px] text-muted-foreground">{mode === "demo" ? "Quantera · Sample data" : "Quantera · Internal"}</p>
       </div>
     </div>
   );
@@ -72,9 +72,9 @@ function RoleSwitcher() {
     <div className="flex items-center gap-2">
       <div className="hidden text-right text-xs leading-tight md:block">
         <p className="font-medium text-foreground">{currentUser.name}</p>
-        <p className="text-muted-foreground">Fictional demo preview</p>
+        <p className="text-muted-foreground">Sample data preview</p>
       </div>
-      <select aria-label="Fictional demo preview" className={cn(nativeSelect, 'max-w-44')} value={preview} onChange={event => { if (isDemoPreview(event.target.value)) setPreview(event.target.value); }}>
+      <select aria-label="Sample data preview" className={cn(nativeSelect, 'max-w-44')} value={preview} onChange={event => { if (isDemoPreview(event.target.value)) setPreview(event.target.value); }}>
         {Object.entries(DEMO_PREVIEWS).map(([key, item]) => <option key={key} value={key}>{item.label} · Demo</option>)}
       </select>
       {authenticatedDevelopment && <Button variant="outline" size="sm" onClick={async () => { await qc.cancelQueries(); qc.clear(); sessionStorage.removeItem('ai-cfo-demo'); await supabase.auth.signOut(); await navigate({ to: '/auth', replace: true }); }}>Sign out</Button>}
@@ -122,7 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 border-r bg-sidebar py-5 lg:flex">
         <Brand />
         <div className="flex-1 overflow-auto px-3"><NavLinks /></div>
-        <p className="px-6 text-[11px] text-muted-foreground">{mode === "demo" ? "Fictional data · No company records" : "Private employee access · PayPal disabled"}</p>
+        <p className="px-6 text-[11px] text-muted-foreground">{mode === "demo" ? "Sample finances · Quantera team · No real payments" : "Private employee access · PayPal disabled"}</p>
       </aside>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-72 bg-sidebar p-0 py-5">
