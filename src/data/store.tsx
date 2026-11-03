@@ -125,8 +125,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [demo, setDemo] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
-    setDemo(sessionStorage.getItem('ai-cfo-demo') === 'true');
-    void supabase.auth.getUser().then(({ data }) => { setSignedIn(!!data.user); setReady(true); });
+    const isDemo = sessionStorage.getItem('ai-cfo-demo') === 'true';
+    setDemo(isDemo);
+    if (isDemo) { setReady(true); return; }
+    void supabase.auth.getUser().then(({ data }) => { setSignedIn(!!data.user); setReady(true); }).catch(() => setReady(true));
   }, [path]);
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {

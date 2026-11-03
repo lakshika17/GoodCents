@@ -20,7 +20,7 @@ export function AuthScreen() {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
     if (error) setMessage(error.message);
-    else await router.invalidate();
+    else { await router.invalidate(); await navigate({ to: '/' }); }
   };
   const social = async (provider: 'google' | 'lovable') => {
     const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
