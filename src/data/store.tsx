@@ -4,8 +4,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { loadInternal, performInternal } from "./internal.functions";
+import { loadDeveloperAccess, loadInternal, performInternal } from "./internal.functions";
 import { actionSchema } from "./action-schema";
+import { DEMO_PREVIEWS, isDemoPreview, type DemoPreview } from './demo-preview';
 import { AuthScreen } from "@/components/auth-screen";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -27,13 +28,20 @@ let idc = 1000;
 const uid = (p: string) => `${p}-${++idc}`;
 
 function useStoreValue() {
-  const [role, setRole] = useState<Role>("admin");
+  const [preview, setPreviewState] = useState<DemoPreview>('developer');
+  useEffect(() => {
+    const saved = sessionStorage.getItem('ai-cfo-preview');
+    if (isDemoPreview(saved)) setPreviewState(saved);
+  }, []);
+  const setPreview = (next: DemoPreview) => { setPreviewState(next); sessionStorage.setItem('ai-cfo-preview', next); };
+  const role = DEMO_PREVIEWS[preview].role;
+  const setRole = (next: Role) => setPreview(next === 'admin' ? 'developer' : next);
   const [s, set] = useState<State>(() => ({
     departments: seed.departments, employees: seed.employees, projects: seed.projects, projectDepartments: seed.projectDepartments,
     budgets: seed.budgets, expenses: seed.expenses, receipts: seed.receipts, approvals: seed.approvals,
     reimbursements: seed.reimbursements, notifications: seed.notifications, policy: seed.defaultPolicy,
   }));
-  const currentUser = s.employees.find((e) => e.id === DEMO_USERS[role]);
+  const currentUser = s.employees.find((e) => e.id === DEMO_PREVIEWS[preview].employeeId);
   if (!currentUser) throw new Error("Demo persona unavailable");
 
   const notify = (st: State, type: NotificationType, message: string, audience: Role[], employeeId?: string): State => ({
@@ -108,7 +116,7 @@ function useStoreValue() {
   const visibleNotifications = s.notifications.filter((n) => n.audience.includes(role) && (role !== "employee" || !n.employeeId || n.employeeId === currentUser.id));
 
   return {
-    ...s, role, setRole, currentUser, uid, visibleNotifications, mode: "demo" as "demo" | "internal", canAuthorize: role === "admin", sharedTotals: [] as { project_id: string; approved_total: number; pending_total: number }[],
+    ...s, role, setRole, preview, setPreview, authenticatedDevelopment: false, currentUser, uid, visibleNotifications, mode: "demo" as "demo" | "internal", canAuthorize: DEMO_PREVIEWS[preview].canAuthorize, sharedTotals: [] as { project_id: string; approved_total: number; pending_total: number }[],
     submitExpense, decide, respondToChanges, setReimbursementStatus, upsertBudget, upsertEmployee, removeEmployee,
     upsertDepartment, upsertProject, setPolicy, markAllRead,
   };
@@ -116,9 +124,9 @@ function useStoreValue() {
 
 type Store = ReturnType<typeof useStoreValue>;
 const Ctx = createContext<Store | null>(null);
-function DemoProvider({ children }: { children: ReactNode }) {
+function DemoProvider({ children, authenticated = false }: { children: ReactNode; authenticated?: boolean }) {
   const v = useStoreValue();
-  return <Ctx.Provider value={v}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ ...v, authenticatedDevelopment: authenticated }}>{children}</Ctx.Provider>;
 }
 export function StoreProvider({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: s => s.location.pathname });
@@ -141,6 +149,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   if (!ready) return <p className="p-6 text-muted-foreground">Loading…</p>;
   if (demo) return <DemoProvider>{children}</DemoProvider>;
   if (!signedIn) return <AuthScreen />;
+  return <SignedInProvider>{children}</SignedInProvider>;
+}
+function SignedInProvider({ children }: { children: ReactNode }) {
+  const loadAccess = useServerFn(loadDeveloperAccess);
+  const access = useQuery({ queryKey: ['developer-access'], queryFn: () => loadAccess(), retry: false });
+  if (access.isPending) return <p className="p-6 text-muted-foreground">Checking verified access…</p>;
+  if (access.error) return <div className="p-6"><p role="alert">Development access could not be verified.</p><Button onClick={() => void supabase.auth.signOut()}>Sign out</Button></div>;
+  if (access.data?.authorized) return <DemoProvider authenticated>{children}</DemoProvider>;
   return <InternalProvider>{children}</InternalProvider>;
 }
 function InternalProvider({ children }: { children: ReactNode }) {
@@ -171,7 +187,7 @@ function InternalProvider({ children }: { children: ReactNode }) {
     projects: dataRows<Project>('projects'), projectDepartments: rows('project_departments').map(r => ({ projectId: r["project_id"], departmentId: r["department_id"] })),
     budgets: dataRows<Budget>('budgets'), expenses, receipts: dataRows<Receipt>('receipts'), approvals: dataRows<Approval>('approvals'), reimbursements: dataRows<Reimbursement>('reimbursements'), notifications,
     policy: (rows('approval_policies')[0]?.['data'] ?? seed.defaultPolicy) as ApprovalPolicy,
-    role, setRole: denied, currentUser, uid: prefix => `${prefix}-${crypto.randomUUID()}`, visibleNotifications: notifications,
+    role, setRole: denied, preview: 'developer', setPreview: denied, authenticatedDevelopment: false, currentUser, uid: prefix => `${prefix}-${crypto.randomUUID()}`, visibleNotifications: notifications,
     mode: 'internal', canAuthorize: rows('user_roles').some(r => r["role"] === 'finance'), sharedTotals: query.data.sharedTotals,
     submitExpense: async (e, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
     decide: (id, decision, comment) => mutate('decision', { id, decision, comment }),
