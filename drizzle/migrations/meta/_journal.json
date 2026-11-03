@@ -8,6 +8,13 @@
       "when": 1793690128915,
       "tag": "0000_quantera_internal_security",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793690185219,
+      "tag": "0001_quantera_atomic_actions",
+      "breakpoints": true
     }
   ]
 }

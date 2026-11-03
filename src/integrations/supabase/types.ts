@@ -560,6 +560,10 @@ export type Database = {
       can_project: { Args: { _project: string }; Returns: boolean }
       current_employee: { Args: never; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      internal_action: {
+        Args: { action: string; payload: Json }
+        Returns: undefined
+      }
       shared_project_totals: {
         Args: never
         Returns: {
