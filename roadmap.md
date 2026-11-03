@@ -4,7 +4,8 @@
 - [x] Deliver beginner-friendly current-interface guide, readiness checklist, integration responsibilities, and pre-upload verification requirements.
 - [x] Add clearly labeled fictional Developer/Admin, Employee, Manager, Finance, and Terry previews without changing the design or ten sections.
 - [x] Determine developer account status and configure isolated development-only eligibility requiring verified sign-in; explain secure account provisioning.
-- [ ] Complete Lakshika's authenticated Admin sign-in. Blocked: her app account does not exist; she must accept a developer-account invitation.
+- [x] Provision lakshika.sarupria@quantera.as as a verified account linked to EMP-005 with development Admin eligibility; dashboard verified with a test session.
+- [ ] Confirm Lakshika's own "Sign in with Lovable" click completes. Waits on: Lakshika signing in herself.
 - [ ] Invite Zichen as project Editor and provision verified development app access. Blocked: project collaboration invitation requires owner action; his app identity is not verified.
 - [x] Enable Cloud and invitation-only employee sign-in.
 - [x] Configure five workbook employees and departments with separate roles.
