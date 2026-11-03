@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Bell, Bot, Building2, CalendarClock, CheckSquare, HandCoins, LayoutDashboard, Menu, PiggyBank, Plus,
-  Receipt, Settings, ShoppingCart, Sparkles,
+  Receipt, Settings, ShieldCheck, ShoppingCart, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -26,6 +26,7 @@ const nav: NavItem[] = [
   { to: "/time-machine", label: "Time Machine", icon: CalendarClock, optional: true },
   { to: "/assistant", label: "AI CFO Assistant", icon: Bot },
   { to: "/reimbursements", label: "Reimbursements", icon: HandCoins },
+  { to: "/vault", label: "Secure Spend Vault", icon: ShieldCheck },
   { to: "/people", label: "Employees & Depts", icon: Building2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
