@@ -19,3 +19,4 @@
 - Workbook directory fixtures live in a shared browser-safe module; sample spending tracks reference its employee and department IDs while preserving deterministic financial values independently of display names.
 - Development Admin authorization is owner-provisioned separately from employee roles and requires a revalidated, confirmed account; it opens the fictional provider only, never company finance permissions.
 - Uploaded documents are classified by type in `src/lib/documents.ts`; only paid receipts and supplier invoices become expenses, others (quotes, orders, customer documents, drafts) are stored separately and never affect spending — keeps approval queue and totals limited to real spending evidence.
+- Document AI reading runs only in an authenticated server function for verified employees or development Admins; results are suggestions that users must verify — keeps the AI key server-side and prevents unverified data from reaching approvals.
