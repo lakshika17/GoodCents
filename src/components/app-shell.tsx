@@ -24,7 +24,7 @@ const nav: NavItem[] = [
   { to: "/time-machine", label: "Time Machine", icon: CalendarClock, optional: true },
   { to: "/assistant", label: "AI CFO Assistant", icon: Bot },
   { to: "/reimbursements", label: "Reimbursements", icon: HandCoins },
-  { to: "/people", label: "Employees & Depts", icon: Building2, roles: ["admin"] },
+  { to: "/people", label: "Employees & Depts", icon: Building2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
