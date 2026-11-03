@@ -1,0 +1,1 @@
+INSERT INTO public.developer_roles (email, role, active) VALUES ('lakshika.sarupria@quantera.as', 'admin', true) ON CONFLICT (email) DO UPDATE SET active = true;
