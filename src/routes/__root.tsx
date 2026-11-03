@@ -16,6 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "@/data/store";
 import { AppShell } from "@/components/app-shell";
 import { Toaster } from "@/components/ui/sonner";
+import { isPublicPath } from "@/lib/utils";
 
 function NotFoundComponent() {
   return (
@@ -94,7 +95,7 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const path = useRouterState({ select: s => s.location.pathname });
-  const publicScreen = ["/auth", "/reset-password", "/demo"].includes(path);
+  const publicScreen = isPublicPath(path);
   return (
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
