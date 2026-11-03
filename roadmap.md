@@ -1,4 +1,6 @@
 # Quantera internal access update
+- [ ] Add clearly labeled fictional Developer/Admin, Employee, Manager, Finance, and Terry previews without changing the design or ten sections.
+- [ ] Determine verified developer account status and explain secure role provisioning; never assign authority to an unverified account.
 - [x] Enable Cloud and invitation-only employee sign-in.
 - [x] Configure five workbook employees and departments with separate roles.
 - [x] Implement organization/department/project permissions, private receipts, audit history, and access requests.
