@@ -1,4 +1,6 @@
 # Quantera internal access update
+- [ ] Explain how to invite Zichen as project Editor without ownership transfer or company-data access.
+- [ ] Deliver beginner-friendly current-interface guide, readiness checklist, integration responsibilities, and pre-upload verification requirements.
 - [ ] Add clearly labeled fictional Developer/Admin, Employee, Manager, Finance, and Terry previews without changing the design or ten sections.
 - [ ] Determine verified developer account status and explain secure role provisioning; never assign authority to an unverified account.
 - [x] Enable Cloud and invitation-only employee sign-in.
