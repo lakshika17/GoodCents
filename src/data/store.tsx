@@ -78,11 +78,11 @@ function useStoreValue() {
 
   const setReimbursementStatus = useCallback((id: string, status: ReimbursementStatus, note: string) => {
     set((st) => {
-      const rb = st.reimbursements.find((r) => r.id === id);
+      const rb = st.reimbursements.find((r) => r["id"] === id);
       if (!rb) return st;
       let next: State = {
         ...st,
-        reimbursements: st.reimbursements.map((r) => r.id === id ? { ...r, status, authorizedBy: r.authorizedBy ?? (status === "queued" ? DEMO_USERS[role] : null), history: [...r.history, { date: today(), status, note }] } : r),
+        reimbursements: st.reimbursements.map((r) => r["id"] === id ? { ...r, status, authorizedBy: r["authorized"]By ?? (status === "queued" ? DEMO_USERS[role] : null), history: [...r["history"], { date: today(), status, note }] } : r),
       };
       if (status === "queued") next = notify(next, "reimbursement_initiated", `Reimbursement authorized and queued (demo) — $${rb.amount.toFixed(2)}`, ["employee", "admin"], rb.employeeId);
       return next;
@@ -150,8 +150,8 @@ function InternalProvider({ children }: { children: ReactNode }) {
   const tables = query.data.tables;
   type Row = Record<string, any>;
   const rows = (name: string) => (tables[name] ?? []) as Row[];
-  const dataRows = <T,>(name: string) => rows(name).map(r => ({ ...r.data, id: r.id })) as T[];
-  const employees: Employee[] = rows('employees').map(r => ({ id: r.id, name: r.name, email: r.email, title: r.title, role: r.access_role === 'Founder' ? 'admin' : r.access_role === 'Manager' ? 'manager' : 'employee', departmentId: r.department_id, managerId: r.manager_id }));
+  const dataRows = <T,>(name: string) => rows(name).map(r => ({ ...r["data"], id: r["id"] })) as T[];
+  const employees: Employee[] = rows('employees').map(r => ({ id: r["id"], name: r["name"], email: r["email"], title: r["title"], role: r["access_role"] === 'Founder' ? 'admin' : r["access_role"] === 'Manager' ? 'manager' : 'employee', departmentId: r["department_id"], managerId: r["manager_id"] }));
   const currentUser = employees.find(e => e.id === query.data.profile.employee_id);
   if (!currentUser) return <p className="p-6">Employee profile unavailable.</p>;
   const role = currentUser.role;
@@ -163,12 +163,12 @@ function InternalProvider({ children }: { children: ReactNode }) {
   const expenses = dataRows<Expense>('expenses');
   const notifications = dataRows<AppNotification>('notifications');
   const value: Store = {
-    departments: rows('departments').map(r => ({ id: r.id, name: r.name, managerId: r.manager_id })), employees,
-    projects: dataRows<Project>('projects'), projectDepartments: rows('project_departments').map(r => ({ projectId: r.project_id, departmentId: r.department_id })),
+    departments: rows('departments').map(r => ({ id: r["id"], name: r["name"], managerId: r["manager_id"] })), employees,
+    projects: dataRows<Project>('projects'), projectDepartments: rows('project_departments').map(r => ({ projectId: r["project_id"], departmentId: r["department_id"] })),
     budgets: dataRows<Budget>('budgets'), expenses, receipts: dataRows<Receipt>('receipts'), approvals: dataRows<Approval>('approvals'), reimbursements: dataRows<Reimbursement>('reimbursements'), notifications,
     policy: (rows('approval_policies')[0]?.data ?? seed.defaultPolicy) as ApprovalPolicy,
     role, setRole: denied, currentUser, uid: prefix => `${prefix}-${crypto.randomUUID()}`, visibleNotifications: notifications,
-    mode: 'internal', canAuthorize: rows('user_roles').some(r => r.role === 'finance'), sharedTotals: query.data.sharedTotals,
+    mode: 'internal', canAuthorize: rows('user_roles').some(r => r["role"] === 'finance'), sharedTotals: query.data.sharedTotals,
     submitExpense: async (e, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
     decide: (id, decision, comment) => mutate('decision', { id, decision, comment }),
     respondToChanges: (id, response, patch) => mutate('respond', { id, response, amount: patch.amount }),

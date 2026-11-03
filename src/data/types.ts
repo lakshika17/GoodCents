@@ -21,7 +21,7 @@ export interface Expense {
   category: Category; departmentId: string; projectId: string | null; description: string;
   receiptId: string | null; approvalStatus: ApprovalStatus; submittedAt: string;
 }
-export interface Receipt { id: string; fileName: string; fileType: string; previewUrl: string | null; extractionSimulated: boolean; storagePath?: string }
+export interface Receipt { id: string; fileName: string; fileType: string; previewUrl: string | null; extractionSimulated: boolean; storagePath?: string | undefined }
 
 export interface Approval {
   id: string; expenseId: string; managerId: string; decision: Exclude<ApprovalStatus, "pending">;
