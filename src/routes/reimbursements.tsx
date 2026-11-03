@@ -17,11 +17,11 @@ export const Route = createFileRoute("/reimbursements")({
 });
 
 function Reimbursements() {
-  const { reimbursements, expenses, employees, role, currentUser, setReimbursementStatus } = useStore();
+  const { reimbursements, expenses, employees, role, currentUser, setReimbursementStatus, canAuthorize, mode } = useStore();
   const [filter, setFilter] = useState<"all" | ReimbursementStatus>("all");
   const [confirm, setConfirm] = useState<Reimbursement | null>(null);
   const [detail, setDetail] = useState<Reimbursement | null>(null);
-  const scoped = role === "employee" ? reimbursements.filter((r) => r.employeeId === currentUser.id)
+  const scoped = mode === "internal" ? reimbursements : role === "employee" ? reimbursements.filter((r) => r.employeeId === currentUser.id)
     : role === "manager" ? reimbursements.filter((r) => employees.find((e) => e.id === r.employeeId)?.departmentId === currentUser.departmentId) : reimbursements;
   const rows = scoped.filter((r) => filter === "all" || r.status === filter);
   const sum = (s: ReimbursementStatus) => scoped.filter((r) => r.status === s).reduce((a, r) => a + r.amount, 0);
@@ -58,7 +58,7 @@ function Reimbursements() {
                     <td className="px-3 text-right font-medium tabular-nums">{money(r.amount, 2)}</td>
                     <td className="whitespace-nowrap px-5 text-right">
                       <Button size="sm" variant="ghost" onClick={() => setDetail(r)}>History</Button>
-                      {role === "admin" && (r.status === "awaiting_authorization" || r.status === "failed") && <Button size="sm" variant="outline" onClick={() => setConfirm(r)}><ShieldCheck className="h-3.5 w-3.5" />Authorize</Button>}
+                      {canAuthorize && (r.status === "await_authorization" as string || r.status === "awaiting_authorization" || r.status === "failed") && <Button size="sm" variant="outline" onClick={() => setConfirm(r)}><ShieldCheck className="h-3.5 w-3.5" />Authorize</Button>}
                     </td>
                   </tr>
                 );
@@ -79,7 +79,7 @@ function Reimbursements() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { if (confirm) { setReimbursementStatus(confirm.id, "queued", `Authorized by ${currentUser.name} (demo)`); toast.success("Queued (demo) — no payment sent"); } setConfirm(null); }}>Authorize (demo)</AlertDialogAction>
+            <AlertDialogAction onClick={async () => { if (confirm) { await setReimbursementStatus(confirm.id, "queued", `Authorized by ${currentUser.name} (demo)`); toast.success("Queued — no payment sent"); } setConfirm(null); }}>Authorize (sandbox)</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -18,7 +18,7 @@ const MONTHS = ["2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"
 const monthLabel = (m: string) => new Date(`${m}-15`).toLocaleString("en-US", { month: "short" });
 
 function Overview() {
-  const { budgets, departments, projects, reimbursements, employees, role } = useStore();
+  const { budgets, departments, projects, reimbursements, employees, role, mode, sharedTotals } = useStore();
   const scoped = useScopedExpenses();
   const [f, setF] = useState({ month: "all", dept: "all", project: "all", status: "all" });
 
@@ -124,7 +124,7 @@ function Overview() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Panel title="Upcoming commitments">
           <div className="divide-y">
-            {upcomingCommitments.filter((c) => f.dept === "all" || c.departmentId === f.dept).map((c) => (
+            {(mode === "demo" ? upcomingCommitments : []).filter((c) => f.dept === "all" || c.departmentId === f.dept).map((c) => (
               <div key={c.id} className="flex justify-between py-2.5 text-sm"><div><p className="font-medium">{c.name}</p><p className="text-xs text-muted-foreground">Due {c.due}</p></div><span className="font-medium tabular-nums">{money(c.amount)}</span></div>
             ))}
           </div>
@@ -135,6 +135,7 @@ function Overview() {
           </div>
         </Panel>
       </div>
+      {mode === "internal" && sharedTotals.length > 0 && <Panel title="Authorized shared project totals" className="mt-4">{sharedTotals.map(p => <div key={p.project_id} className="flex justify-between py-2 text-sm"><span>{projects.find(x => x.id === p.project_id)?.name}</span><span>{money(p.approved_total)} approved · {money(p.pending_total)} pending</span></div>)}</Panel>}
     </>
   );
 }
