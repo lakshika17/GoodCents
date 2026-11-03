@@ -175,7 +175,7 @@ function VendorRelease({ id }: { id: string }) {
   const { currentUser, canAuthorize, role } = useStore();
   const v = useVault();
   const r = v.requests.find((x) => x.id === id)!;
-  const blockers = releaseBlockers({ settings: v.settings, payments: v.payments, amount: r.amount, refId: r.id, today: DEMO_TODAY, payeeId: r.requesterId, authorizerId: currentUser.id, canAuthorize: role === "admin" || canAuthorize });
+  const blockers = releaseBlockers({ settings: v.settings, payments: v.payments, amount: r.amount, refId: r.id, today: DEMO_TODAY, payeeId: r.requesterId, authorizerId: currentUser.id, canAuthorize: role === "admin" || canAuthorize, approverId: r.managerId });
   const go = () => {
     if (blockers.length) { toast.error(blockers.join(" ")); return; }
     const ref = `SANDBOX-DEMO-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;

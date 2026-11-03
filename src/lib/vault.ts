@@ -17,10 +17,11 @@ export function vaultSummary(s: VaultSettings, payments: VaultPayment[], reserve
 }
 
 /** Every reason a payment release must be blocked. Empty means it may be released by an authorized person. */
-export function releaseBlockers(o: { settings: VaultSettings; payments: VaultPayment[]; amount: number; refId: string; today: string; payeeId: string; authorizerId: string; canAuthorize: boolean }): string[] {
+export function releaseBlockers(o: { settings: VaultSettings; payments: VaultPayment[]; amount: number; refId: string; today: string; payeeId: string; authorizerId: string; canAuthorize: boolean; approverId?: string | null }): string[] {
   const r: string[] = [];
   if (!o.canAuthorize) r.push("Only Terry or an authorized finance administrator can release payments.");
   if (o.payeeId === o.authorizerId) r.push("You cannot authorize a payment to yourself.");
+  if (o.approverId && o.approverId === o.authorizerId) r.push("The manager who approved this cannot also authorize its payment.");
   if (o.settings.frozen) r.push("New payments are frozen.");
   if (!(o.amount > 0)) r.push("Amount must be positive.");
   if (o.amount > o.settings.perTransactionLimit) r.push("Exceeds the per-transaction limit.");
