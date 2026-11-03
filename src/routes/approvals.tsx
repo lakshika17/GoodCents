@@ -31,7 +31,7 @@ function ManagerQueue() {
     <>
       <PageHeader title="Approvals" badge={<DemoBadge />} description="AI recommendations are suggestions only — you make the final decision." />
       {queue.length === 0 ? <Panel><p className="py-10 text-center text-sm text-muted-foreground">Nothing waiting for approval. 🎉</p></Panel> : (
-        <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
           <Panel title={`Queue (${queue.length})`} className="p-3">
             <div className="grid max-h-[70vh] gap-1 overflow-auto">
               {queue.map((e) => <QueueItem key={e.id} e={e} active={current?.id === e.id} onClick={() => setSel(e.id)} />)}
@@ -70,8 +70,8 @@ function ReviewCard({ e }: { e: Expense }) {
   };
 
   return (
-    <Panel>
-      <div className="grid gap-5 md:grid-cols-[200px_1fr]">
+    <Panel className="min-w-0">
+      <div className="grid gap-5 md:grid-cols-[200px_minmax(0,1fr)]">
         <div className="grid aspect-[3/4] place-items-center overflow-hidden rounded-lg border bg-muted text-xs text-muted-foreground">
           {receipt?.previewUrl ? <img src={receipt.previewUrl} alt="Receipt" className="h-full w-full object-cover" /> : receipt ? <span className="grid justify-items-center gap-2 p-3 text-center"><FileImage className="h-6 w-6" />{receipt.fileName}<span>Preview unavailable in demo</span></span> : <span className="grid justify-items-center gap-2"><AlertTriangle className="h-5 w-5 text-warning" />No receipt</span>}
         </div>
@@ -92,7 +92,7 @@ function ReviewCard({ e }: { e: Expense }) {
           </div>
           <div className="mt-4 rounded-lg border bg-accent/50 p-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="flex items-center gap-2 text-sm font-semibold"><Bot className="h-4 w-4 text-primary" />AI recommendation: <span className="capitalize">{rec.action}</span></p>
+              <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold"><Bot className="h-4 w-4 text-primary" />AI recommendation: <span className="capitalize">{rec.action}</span></p>
               <DemoBadge>Rule-based demo · not live AI</DemoBadge>
             </div>
             <ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground">{rec.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
