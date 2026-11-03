@@ -10,33 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApprovalsRouteImport } from './routes/approvals'
+import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as BudgetsRouteImport } from './routes/budgets'
+import { Route as ExpensesRouteImport } from './routes/expenses'
+import { Route as NegotiatorRouteImport } from './routes/negotiator'
+import { Route as PeopleRouteImport } from './routes/people'
+import { Route as ReimbursementsRouteImport } from './routes/reimbursements'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TimeMachineRouteImport } from './routes/time-machine'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssistantRoute = AssistantRouteImport.update({
+  id: '/assistant',
+  path: '/assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BudgetsRoute = BudgetsRouteImport.update({
+  id: '/budgets',
+  path: '/budgets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpensesRoute = ExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NegotiatorRoute = NegotiatorRouteImport.update({
+  id: '/negotiator',
+  path: '/negotiator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PeopleRoute = PeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReimbursementsRoute = ReimbursementsRouteImport.update({
+  id: '/reimbursements',
+  path: '/reimbursements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TimeMachineRoute = TimeMachineRouteImport.update({
+  id: '/time-machine',
+  path: '/time-machine',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
+  '/assistant': typeof AssistantRoute
+  '/budgets': typeof BudgetsRoute
+  '/expenses': typeof ExpensesRoute
+  '/negotiator': typeof NegotiatorRoute
+  '/people': typeof PeopleRoute
+  '/reimbursements': typeof ReimbursementsRoute
+  '/settings': typeof SettingsRoute
+  '/time-machine': typeof TimeMachineRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
+  '/assistant': typeof AssistantRoute
+  '/budgets': typeof BudgetsRoute
+  '/expenses': typeof ExpensesRoute
+  '/negotiator': typeof NegotiatorRoute
+  '/people': typeof PeopleRoute
+  '/reimbursements': typeof ReimbursementsRoute
+  '/settings': typeof SettingsRoute
+  '/time-machine': typeof TimeMachineRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
+  '/assistant': typeof AssistantRoute
+  '/budgets': typeof BudgetsRoute
+  '/expenses': typeof ExpensesRoute
+  '/negotiator': typeof NegotiatorRoute
+  '/people': typeof PeopleRoute
+  '/reimbursements': typeof ReimbursementsRoute
+  '/settings': typeof SettingsRoute
+  '/time-machine': typeof TimeMachineRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/approvals'
+    | '/assistant'
+    | '/budgets'
+    | '/expenses'
+    | '/negotiator'
+    | '/people'
+    | '/reimbursements'
+    | '/settings'
+    | '/time-machine'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/approvals'
+    | '/assistant'
+    | '/budgets'
+    | '/expenses'
+    | '/negotiator'
+    | '/people'
+    | '/reimbursements'
+    | '/settings'
+    | '/time-machine'
+  id:
+    | '__root__'
+    | '/'
+    | '/approvals'
+    | '/assistant'
+    | '/budgets'
+    | '/expenses'
+    | '/negotiator'
+    | '/people'
+    | '/reimbursements'
+    | '/settings'
+    | '/time-machine'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApprovalsRoute: typeof ApprovalsRoute
+  AssistantRoute: typeof AssistantRoute
+  BudgetsRoute: typeof BudgetsRoute
+  ExpensesRoute: typeof ExpensesRoute
+  NegotiatorRoute: typeof NegotiatorRoute
+  PeopleRoute: typeof PeopleRoute
+  ReimbursementsRoute: typeof ReimbursementsRoute
+  SettingsRoute: typeof SettingsRoute
+  TimeMachineRoute: typeof TimeMachineRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +169,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/approvals': {
+      id: '/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ApprovalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assistant': {
+      id: '/assistant'
+      path: '/assistant'
+      fullPath: '/assistant'
+      preLoaderRoute: typeof AssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/budgets': {
+      id: '/budgets'
+      path: '/budgets'
+      fullPath: '/budgets'
+      preLoaderRoute: typeof BudgetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expenses': {
+      id: '/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof ExpensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/negotiator': {
+      id: '/negotiator'
+      path: '/negotiator'
+      fullPath: '/negotiator'
+      preLoaderRoute: typeof NegotiatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/people': {
+      id: '/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reimbursements': {
+      id: '/reimbursements'
+      path: '/reimbursements'
+      fullPath: '/reimbursements'
+      preLoaderRoute: typeof ReimbursementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/time-machine': {
+      id: '/time-machine'
+      path: '/time-machine'
+      fullPath: '/time-machine'
+      preLoaderRoute: typeof TimeMachineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApprovalsRoute: ApprovalsRoute,
+  AssistantRoute: AssistantRoute,
+  BudgetsRoute: BudgetsRoute,
+  ExpensesRoute: ExpensesRoute,
+  NegotiatorRoute: NegotiatorRoute,
+  PeopleRoute: PeopleRoute,
+  ReimbursementsRoute: ReimbursementsRoute,
+  SettingsRoute: SettingsRoute,
+  TimeMachineRoute: TimeMachineRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
