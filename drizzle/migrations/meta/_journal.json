@@ -15,6 +15,13 @@
       "when": 1793690185219,
       "tag": "0001_quantera_atomic_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793691737283,
+      "tag": "0002_isolated_developer_admin_access",
+      "breakpoints": true
     }
   ]
 }

@@ -257,6 +257,27 @@ export type Database = {
         }
         Relationships: []
       }
+      developer_roles: {
+        Row: {
+          active: boolean
+          email: string
+          id: string
+          role: string
+        }
+        Insert: {
+          active?: boolean
+          email: string
+          id?: string
+          role?: string
+        }
+        Update: {
+          active?: boolean
+          email?: string
+          id?: string
+          role?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           access_role: string
