@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import type { ApprovalPolicy, Budget, Expense, Project } from './types';
 import { actionSchema } from './action-schema';
 import type { Json } from '@/integrations/supabase/types';
+const id = z.string().trim().min(1).max(100);
 
 export const loadInternal = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   const db = context.supabase;
