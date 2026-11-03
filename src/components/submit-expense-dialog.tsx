@@ -1,51 +1,62 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, FileUp, Keyboard, MessageCircle, Sparkles } from "lucide-react";
+import { Camera, FileText, FileUp, Keyboard, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useStore } from "@/data/store";
 import { CATEGORIES, type Category } from "@/data/types";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_TODAY } from "@/data/seed";
-import { DemoBadge, Field, NotConnected, nativeSelect } from "./shared";
+import { DOCUMENT_TYPES, canSubmitForApproval, isDocumentType, isExpenseEligible, type DocumentType } from "@/lib/documents";
+import { Field, NotConnected, nativeSelect } from "./shared";
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
+const blank = (departmentId: string) => ({ documentType: "" as DocumentType | "", vendor: "", amount: "", date: "", category: "Office" as Category, departmentId, projectId: "", description: "" });
 
 export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { currentUser, departments, projects, projectDepartments, submitExpense, mode } = useStore();
+  const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode } = useStore();
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [extracted, setExtracted] = useState(false);
-  const [form, setForm] = useState({ vendor: "", amount: "", date: DEMO_TODAY, category: "Office" as Category, departmentId: currentUser.departmentId, projectId: "", description: "" });
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [pdfFailed, setPdfFailed] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [form, setForm] = useState(() => blank(currentUser.departmentId));
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) { setFile(null); setPreview(null); setExtracted(false); setForm((f) => ({ ...f, vendor: "", amount: "", description: "", departmentId: currentUser.departmentId, projectId: "" })); }
+    if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setForm(blank(currentUser.departmentId)); }
   }, [open, currentUser.departmentId]);
 
+  // Never pre-fill fields: automatic document reading is not connected, so every value is entered by a person.
   const onFile = (f: File | undefined) => {
     if (!f) return;
-    if (!ACCEPT.split(",").includes(f.type)) { toast.error("Please upload a JPG, PNG, or PDF receipt"); return; }
-    setFile(f);
-    setPreview(f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
-    // Simulated extraction: placeholder values so the review flow can be tested. Not real AI output.
-    if (mode === "internal") { setExtracted(false); return; }
-    const seed = f.name.length + f.size;
-    setForm((s) => ({ ...s, vendor: "NorthLab Supply Co.", amount: (40 + (seed % 900)).toFixed(2), category: "Lab Supplies", description: "Extracted (simulated) — please verify" }));
-    setExtracted(true);
+    if (!ACCEPT.split(",").includes(f.type)) { toast.error("Please upload a JPG, PNG, or PDF document"); return; }
+    setFile(f); setPdfFailed(false); setVerified(false);
+    setFileUrl(URL.createObjectURL(f));
   };
+  const update = (patch: Partial<typeof form>) => { setForm((s) => ({ ...s, ...patch })); setVerified(false); };
 
   const projectOptions = projects.filter((p) => projectDepartments.some((pd) => pd.projectId === p.id && pd.departmentId === form.departmentId));
-  const amount = parseFloat(form.amount);
-  const valid = form.vendor.trim() && amount > 0 && form.date;
+  const amount = form.amount === "" ? null : parseFloat(form.amount);
+  const eligible = isExpenseEligible(form.documentType);
+  const complete = !!form.vendor.trim() && amount !== null && amount > 0 && !!form.date;
+  const canSubmit = canSubmitForApproval({ documentType: form.documentType, vendor: form.vendor, amount, date: form.date, verified });
+  const canSaveDocument = !!form.documentType && !eligible && complete && verified;
+  const isPdf = file?.type === "application/pdf";
+
+  const record = (status: "draft" | "saved") => {
+    if (!form.documentType) return;
+    saveDocument({ documentType: form.documentType, status, vendor: form.vendor.trim(), amount: amount && amount > 0 ? amount : null, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, verified, fileName: file?.name ?? null, fileType: file?.type ?? null, previewUrl: fileUrl });
+    if (mode === "demo") { toast.success(status === "draft" ? "Saved as draft — no approval requested" : `${form.documentType} saved — not counted as spending`); onOpenChange(false); }
+  };
 
   const submit = async () => {
-    if (!valid) return;
+    if (!canSubmit || amount === null || !form.documentType) return;
     let storagePath: string | undefined;
     if (mode === "internal" && file) {
-      if (file.size > 10 * 1024 * 1024) { toast.error("Receipt must be 10 MB or smaller"); return; }
+      if (file.size > 10 * 1024 * 1024) { toast.error("Document must be 10 MB or smaller"); return; }
       const { data } = await supabase.auth.getUser();
       if (!data.user) return;
       storagePath = `${data.user.id}/${crypto.randomUUID()}`;
@@ -53,8 +64,8 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
       if (uploaded.error) { toast.error(uploaded.error.message); return; }
     }
     await submitExpense(
-      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description },
-      file ? { fileName: file.name, fileType: file.type, previewUrl: preview, extractionSimulated: extracted, storagePath } : undefined,
+      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, documentType: form.documentType, verified },
+      file ? { fileName: file.name, fileType: file.type, previewUrl: file.type.startsWith("image/") || isPdf ? fileUrl : null, extractionSimulated: false, storagePath } : undefined,
     );
     toast.success(mode === "demo" ? "Expense submitted for approval (demo)" : "Expense submitted for approval");
     onOpenChange(false);
@@ -62,60 +73,84 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[92vh] overflow-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Submit expense</DialogTitle>
-          <DialogDescription>Drop a receipt or type the basics — that's it.</DialogDescription>
+          <DialogTitle>Upload document</DialogTitle>
+          <DialogDescription>Upload a document, choose its type, then enter and verify the details.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-5 md:grid-cols-[1fr_1.2fr]">
           <div className="grid content-start gap-3">
             <input ref={fileRef} type="file" accept={ACCEPT} className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
             <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-            <button onClick={() => fileRef.current?.click()} className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border-2 border-dashed bg-muted/50 text-center transition-colors hover:border-primary/40">
-              {preview ? <img src={preview} alt="Receipt preview" className="h-full w-full object-cover" /> : file ? (
-                <span className="text-sm text-foreground">{file.name}</span>
-              ) : (
-                <span className="grid justify-items-center gap-2 p-4 text-sm text-muted-foreground"><FileUp className="h-6 w-6 text-primary" />Upload receipt<span className="text-xs">JPG, PNG or PDF</span></span>
-              )}
-            </button>
+            {file && isPdf && fileUrl && !pdfFailed ? (
+              <div className="grid gap-2">
+                <object data={fileUrl} type="application/pdf" aria-label={`Preview of ${file.name}`} className="aspect-[3/4] w-full rounded-xl border bg-muted" onError={() => setPdfFailed(true)}>
+                  <p className="p-4 text-sm text-muted-foreground">PDF preview is unavailable in this browser. <a className="text-primary underline" href={fileUrl} target="_blank" rel="noreferrer">Open the PDF in a new tab</a>.</p>
+                </object>
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground"><span className="truncate">{file.name}</span><button className="text-primary" onClick={() => fileRef.current?.click()}>Replace</button></div>
+              </div>
+            ) : (
+              <button onClick={() => fileRef.current?.click()} className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border-2 border-dashed bg-muted/50 text-center transition-colors hover:border-primary/40">
+                {file && fileUrl && file.type.startsWith("image/") ? <img src={fileUrl} alt="Document preview" className="h-full w-full object-cover" /> : file ? (
+                  <span className="grid justify-items-center gap-2 p-4 text-sm"><FileText className="h-6 w-6 text-primary" />{file.name}<span className="text-xs text-muted-foreground">Preview unavailable for this file</span></span>
+                ) : (
+                  <span className="grid justify-items-center gap-2 p-4 text-sm text-muted-foreground"><FileUp className="h-6 w-6 text-primary" />Upload document<span className="text-xs">JPG, PNG or PDF</span></span>
+                )}
+              </button>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={() => camRef.current?.click()}><Camera className="h-4 w-4" />Camera</Button>
-              <Button variant="outline" size="sm" onClick={() => { setFile(null); setPreview(null); setExtracted(false); }}><Keyboard className="h-4 w-4" />Type manually</Button>
+              <Button variant="outline" size="sm" onClick={() => { setFile(null); setFileUrl(null); setVerified(false); }}><Keyboard className="h-4 w-4" />Type manually</Button>
             </div>
+            <NotConnected>Automatic reading of documents is not connected. Fields stay blank — enter them from the document.</NotConnected>
             <NotConnected><MessageCircle className="mr-1 inline h-3 w-3" />WhatsApp, Google Chat and SMS submission are planned and not connected yet.</NotConnected>
           </div>
           <div className="grid content-start gap-3">
-            {extracted && (
-              <div className="flex items-center justify-between rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground">
-                <span className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />Extraction preview — please check</span>
-                <DemoBadge>Simulated, not real AI</DemoBadge>
-              </div>
+            <Field label="Document type">
+              <select aria-label="Document type" className={nativeSelect} value={form.documentType} onChange={(e) => update({ documentType: isDocumentType(e.target.value) ? e.target.value : "" })}>
+                <option value="">Select document type…</option>
+                {DOCUMENT_TYPES.map((t) => <option key={t}>{t}</option>)}
+              </select>
+            </Field>
+            {form.documentType && (
+              <p className="rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground">
+                {eligible ? "This can be submitted for expense approval once verified." : `${form.documentType}s are saved separately. They never enter the approval queue or count toward spending or reimbursements.`}
+              </p>
             )}
-            <Field label="Vendor"><Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} placeholder="e.g. Green Fork Cafe" /></Field>
+            <Field label={eligible || !form.documentType ? "Vendor" : "Company / vendor"}><Input value={form.vendor} onChange={(e) => update({ vendor: e.target.value })} placeholder="As shown on the document" /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Amount (USD)"><Input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></Field>
-              <Field label="Date"><Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></Field>
+              <Field label="Amount (USD)"><Input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => update({ amount: e.target.value })} /></Field>
+              <Field label="Document date"><Input type="date" value={form.date} onChange={(e) => update({ date: e.target.value })} /></Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Category">
-                <select className={nativeSelect} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as Category })}>
+                <select className={nativeSelect} value={form.category} onChange={(e) => update({ category: e.target.value as Category })}>
                   {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
                 </select>
               </Field>
               <Field label="Department">
-                <select className={nativeSelect} value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value, projectId: "" })}>
+                <select className={nativeSelect} value={form.departmentId} onChange={(e) => update({ departmentId: e.target.value, projectId: "" })}>
                   {departments.filter(d => mode === "demo" || d.id === currentUser.departmentId).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </Field>
             </div>
             <Field label="Project (optional)">
-              <select className={nativeSelect} value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
+              <select className={nativeSelect} value={form.projectId} onChange={(e) => update({ projectId: e.target.value })}>
                 <option value="">No project</option>
                 {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
-            <Field label="Note (optional)"><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
-            <Button onClick={submit} disabled={!valid} className="mt-1">Submit for approval</Button>
+            <Field label="Note (optional)"><Input value={form.description} onChange={(e) => update({ description: e.target.value })} /></Field>
+            <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+              <Checkbox checked={verified} disabled={!complete || !form.documentType} onCheckedChange={(v) => setVerified(v === true)} aria-label="I verified these details" />
+              <span>I checked the type, vendor, amount and date against the document.{(!complete || !form.documentType) && <span className="block text-xs text-muted-foreground">Fill in the type, vendor, amount and date first.</span>}</span>
+            </label>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+              <Button variant="outline" disabled={!form.documentType} onClick={() => record("draft")}>Save as draft</Button>
+              {eligible || !form.documentType
+                ? <Button onClick={submit} disabled={!canSubmit}>Submit for approval</Button>
+                : <Button onClick={() => record("saved")} disabled={!canSaveDocument}>Save {form.documentType}</Button>}
+            </div>
           </div>
         </div>
       </DialogContent>

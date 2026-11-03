@@ -18,3 +18,4 @@
 - Sample-data preview personas are defined in a pure configuration module and only affect the in-memory demo provider; displayed workbook employee identities never assign backend roles or grant access to company records.
 - Workbook directory fixtures live in a shared browser-safe module; sample spending tracks reference its employee and department IDs while preserving deterministic financial values independently of display names.
 - Development Admin authorization is owner-provisioned separately from employee roles and requires a revalidated, confirmed account; it opens the fictional provider only, never company finance permissions.
+- Uploaded documents are classified by type in `src/lib/documents.ts`; only paid receipts and supplier invoices become expenses, others (quotes, orders, customer documents, drafts) are stored separately and never affect spending — keeps approval queue and totals limited to real spending evidence.
