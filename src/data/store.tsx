@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type {
   AppNotification, ApprovalPolicy, Approval, Budget, Department, Employee, Expense, NotificationType,
-  Project, ProjectDepartment, Receipt, Reimbursement, ReimbursementStatus, Role,
+  Project, ProjectDepartment, Receipt, Reimbursement, ReimbursementStatus, Role, SavedDocument,
 } from "./types";
 
 // Central in-memory demo state. All pages read/write through this hook only,
@@ -20,7 +20,7 @@ import type {
 interface State {
   departments: Department[]; employees: Employee[]; projects: Project[]; projectDepartments: ProjectDepartment[];
   budgets: Budget[]; expenses: Expense[]; receipts: Receipt[]; approvals: Approval[]; reimbursements: Reimbursement[];
-  notifications: AppNotification[]; policy: ApprovalPolicy;
+  notifications: AppNotification[]; policy: ApprovalPolicy; documents: SavedDocument[];
 }
 const today = () => seed.DEMO_TODAY;
 let idc = 1000;
@@ -38,7 +38,7 @@ function useStoreValue() {
   const [s, set] = useState<State>(() => ({
     departments: seed.departments, employees: seed.employees, projects: seed.projects, projectDepartments: seed.projectDepartments,
     budgets: seed.budgets, expenses: seed.expenses, receipts: seed.receipts, approvals: seed.approvals,
-    reimbursements: seed.reimbursements, notifications: seed.notifications, policy: seed.defaultPolicy,
+    reimbursements: seed.reimbursements, notifications: seed.notifications, policy: seed.defaultPolicy, documents: [],
   }));
   const currentUser = s.employees.find((e) => e.id === DEMO_PREVIEWS[preview].employeeId);
   if (!currentUser) throw new Error("Demo persona unavailable");
@@ -55,6 +55,30 @@ function useStoreValue() {
       next = notify(next, "expense_submitted", `Expense submitted: ${e.vendor} $${e.amount.toFixed(2)}`, ["employee"], exp.employeeId);
       next = notify(next, "approval_requested", `New expense awaiting approval: ${e.vendor}`, ["manager"]);
       return next;
+    });
+  }, [currentUser.id]);
+
+  const saveDocument = useCallback((d: Omit<SavedDocument, "id" | "employeeId" | "createdAt">) => {
+    set((st) => ({ ...st, documents: [{ ...d, id: uid("doc"), employeeId: currentUser.id, createdAt: today() }, ...st.documents] }));
+  }, [currentUser.id]);
+  const voidDocument = useCallback((id: string) => {
+    set((st) => ({ ...st, documents: st.documents.map((d) => (d.id === id && d.employeeId === currentUser.id ? { ...d, status: "void" as const } : d)) }));
+  }, [currentUser.id]);
+  /** Voids the current user's own pending expense: removes it from spending and the approval queue, keeps a void record. */
+  const voidExpense = useCallback((expenseId: string) => {
+    set((st) => {
+      const exp = st.expenses.find((e) => e.id === expenseId);
+      if (!exp || exp.employeeId !== currentUser.id || exp.approvalStatus !== "pending") return st;
+      const r = st.receipts.find((x) => x.id === exp.receiptId);
+      const record: SavedDocument = { id: uid("doc"), employeeId: exp.employeeId, documentType: exp.documentType ?? "Paid Receipt", status: "void", vendor: exp.vendor, amount: exp.amount, date: exp.date, category: exp.category, departmentId: exp.departmentId, projectId: exp.projectId, description: exp.description, verified: exp.verified ?? false, fileName: r?.fileName ?? null, fileType: r?.fileType ?? null, previewUrl: r?.previewUrl ?? null, createdAt: today() };
+      return {
+        ...st,
+        expenses: st.expenses.filter((e) => e.id !== expenseId),
+        receipts: st.receipts.filter((x) => x.id !== exp.receiptId),
+        approvals: st.approvals.filter((a) => a.expenseId !== expenseId),
+        documents: [record, ...st.documents],
+        notifications: st.notifications.filter((n) => !(n.date === today() && n.message.includes(exp.vendor) && (n.type === "approval_requested" || n.type === "expense_submitted"))),
+      };
     });
   }, [currentUser.id]);
 
@@ -116,7 +140,7 @@ function useStoreValue() {
 
   return {
     ...s, role, setRole, preview, setPreview, authenticatedDevelopment: false, currentUser, uid, visibleNotifications, mode: "demo" as "demo" | "internal", canAuthorize: DEMO_PREVIEWS[preview].canAuthorize, sharedTotals: [] as { project_id: string; approved_total: number; pending_total: number }[],
-    submitExpense, decide, respondToChanges, setReimbursementStatus, upsertBudget, upsertEmployee, removeEmployee,
+    submitExpense, saveDocument, voidDocument, voidExpense, decide, respondToChanges, setReimbursementStatus, upsertBudget, upsertEmployee, removeEmployee,
     upsertDepartment, upsertProject, setPolicy, markAllRead,
   };
 }
@@ -188,7 +212,11 @@ function InternalProvider({ children }: { children: ReactNode }) {
     policy: (rows('approval_policies')[0]?.['data'] ?? seed.defaultPolicy) as ApprovalPolicy,
     role, setRole: denied, preview: 'developer', setPreview: denied, authenticatedDevelopment: false, currentUser, uid: prefix => `${prefix}-${crypto.randomUUID()}`, visibleNotifications: notifications,
     mode: 'internal', canAuthorize: rows('user_roles').some(r => r["role"] === 'finance'), sharedTotals: query.data.sharedTotals,
-    submitExpense: async (e, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
+    documents: [],
+    saveDocument: () => { toast.error('Drafts, quotes and other non-expense documents cannot be saved to company records yet.'); },
+    voidDocument: () => { toast.error('Voiding company records is not available yet.'); },
+    voidExpense: () => { toast.error('Voiding company records is not available yet.'); },
+    submitExpense: async ({ documentType: _t, verified: _v, ...e }, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
     decide: (id, decision, comment) => mutate('decision', { id, decision, comment }),
     respondToChanges: (id, response, patch) => mutate('respond', { id, response, amount: patch.amount }),
     setReimbursementStatus: (id, status) => mutate('reimbursement', { id, status }),

@@ -1,3 +1,4 @@
+import type { DocumentStatus, DocumentType } from "@/lib/documents";
 // Entity types mirror the planned backend tables 1:1 so demo data can be swapped for API responses.
 export type Role = "employee" | "manager" | "admin";
 
@@ -20,6 +21,7 @@ export interface Expense {
   id: string; employeeId: string; vendor: string; amount: number; date: string;
   category: Category; departmentId: string; projectId: string | null; description: string;
   receiptId: string | null; approvalStatus: ApprovalStatus; submittedAt: string;
+  documentType?: DocumentType | undefined; verified?: boolean | undefined;
 }
 export interface Receipt { id: string; fileName: string; fileType: string; previewUrl: string | null; extractionSimulated: boolean; storagePath?: string | undefined }
 
