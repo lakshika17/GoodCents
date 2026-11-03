@@ -1,9 +1,13 @@
 # Quantera internal access update
+- [ ] Add clearly labeled fictional Developer/Admin, Employee, Manager, Finance, and Terry previews without changing the design or ten sections.
+- [ ] Determine verified developer account status and explain secure role provisioning; never assign authority to an unverified account.
 - [x] Enable Cloud and invitation-only employee sign-in.
 - [x] Configure five workbook employees and departments with separate roles.
 - [x] Implement organization/department/project permissions, private receipts, audit history, and access requests.
 - [x] Connect existing screens through the central store without redesigning them.
 - [x] Separate fictional demo finances from internal records; keep PayPal simulated.
 - [x] Verify signed-out visibility, all ten demo pages, and existing tests.
-- [ ] Verify real employee sign-in, access request approval/revocation, private receipt reads, and denied cross-department actions. Blocked: no invited auth accounts exist; first invite Terry through More → Users → Add user → Send invitation, then sign in.
+- [ ] Verify password login, founder-equivalent visibility, employee isolation, shared totals, access approval/rejection/revocation, and direct backend restrictions using temporary fictional accounts and records; remove all fixtures afterward.
+- [ ] Run dashboard/expense feature regressions and document exact passes, failures, and unverified checks without changing the existing design or features.
+- [ ] Verify real employee invitation acceptance separately. Blocked: user explicitly prohibits real invitations during this test.
 - [ ] Verify invitation and recovery links on the intended HTTPS site. Blocked: employee invitation not yet accepted and app intentionally unpublished.
