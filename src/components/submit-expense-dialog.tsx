@@ -69,7 +69,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const amount = form.amount === "" ? null : parseFloat(form.amount);
   const eligible = isExpenseEligible(form.documentType);
   const complete = !!form.vendor.trim() && amount !== null && amount > 0 && !!form.date;
-  const canSubmit = canSubmitForApproval({ documentType: form.documentType, vendor: form.vendor, amount, date: form.date, verified });
+  const canSubmit = canSubmitForApproval({ documentType: form.documentType, vendor: form.vendor, amount, date: form.date, verified, currency: form.currency });
   const canSaveDocument = !!form.documentType && !eligible && complete && verified;
   const isPdf = file?.type === "application/pdf";
 
@@ -144,7 +144,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Sparkles className="h-3.5 w-3.5 text-primary" />Details: {source === "ai" ? "AI-extracted" : source === "ai_corrected" ? "AI-extracted, corrected by you" : "Manually entered"} · {verified ? "verified" : "unverified"}</p>
             {form.documentType && (
               <p className="rounded-lg bg-accent px-3 py-2 text-xs text-accent-foreground">
-                {eligible ? "This can be submitted for expense approval once verified." : `${form.documentType}s are saved separately. They never enter the approval queue or count toward spending or reimbursements.`}
+                {eligible ? (form.currency === "USD" ? "This can be submitted for expense approval once verified." : "Only USD documents can be submitted for approval right now; save non-USD documents as a draft.") : `${form.documentType}s are saved separately. They never enter the approval queue or count toward spending or reimbursements.`}
               </p>
             )}
             <Field label={eligible || !form.documentType ? "Vendor" : "Company / vendor"}><Input value={form.vendor} onChange={(e) => update({ vendor: e.target.value })} placeholder="As shown on the document" /></Field>
