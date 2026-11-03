@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -92,12 +93,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const path = useRouterState({ select: s => s.location.pathname });
+  const publicScreen = ["/auth", "/reset-password", "/demo"].includes(path);
   return (
     <QueryClientProvider client={queryClient}>
       <StoreProvider>
-        <AppShell>
-          <Outlet />
-        </AppShell>
+        {publicScreen ? <Outlet /> : <AppShell><Outlet /></AppShell>}
         <Toaster />
       </StoreProvider>
     </QueryClientProvider>

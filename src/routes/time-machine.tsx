@@ -13,8 +13,8 @@ export const Route = createFileRoute("/time-machine")({
 });
 
 function TimeMachine() {
-  const { budgets, expenses, role, currentUser } = useStore();
-  const opts = role === "admin" ? budgets : budgets.filter((b) => b.departmentId === currentUser.departmentId);
+  const { budgets, expenses, role, currentUser, mode } = useStore();
+  const opts = mode === "internal" || role === "admin" ? budgets : budgets.filter((b) => b.departmentId === currentUser.departmentId);
   const [budgetId, setBudgetId] = useState(opts[0]?.id ?? "");
   const [amount, setAmount] = useState(2000);
   const [parts, setParts] = useState(3);
@@ -29,7 +29,7 @@ function TimeMachine() {
     const later = projectScenario({ balance, dailyBurn, amount, strategy: "next_month", splitParts: 1 });
     const split = projectScenario({ balance, dailyBurn, amount, strategy: "split", splitParts: parts });
     const base = projectScenario({ balance, dailyBurn, amount: 0, strategy: "now", splitParts: 1 });
-    const data = now.map((p, i) => ({ day: p.day, "Buy now": p.balance, "Next month": later[i]!.balance, [`Split ×${parts}`]: split[i]!.balance, "No purchase": base[i]!.balance }));
+    const data = now.map((p, i) => ({ day: p.day, "Buy now": p.balance, "Next month": later[i]?.balance ?? 0, [`Split ×${parts}`]: split[i]?.balance ?? 0, "No purchase": base[i]?.balance ?? 0 }));
     const rows = [["Buy now", now], ["Next month", later], [`Split ×${parts}`, split]] as const;
     return { balance, dailyBurn, data, rows };
   }, [b, expenses, amount, parts]);
@@ -49,7 +49,7 @@ function TimeMachine() {
                 <li>Starting balance {money(balance)} (budget − approved − pending)</li>
                 <li>Daily spend {money(dailyBurn, 2)} based on Aug–Oct approved expenses</li>
                 <li>No new budget allocations during the window</li>
-                <li>Uses fictional sample data</li>
+                <li>{mode === "demo" ? "Uses fictional sample data" : "Uses authorized records only"}</li>
               </ul>
             </div>
           </div>

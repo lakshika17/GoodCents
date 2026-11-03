@@ -34,6 +34,7 @@ function Assistant() {
   const answer = (raw: string): Msg => {
     const t = raw.toLowerCase();
     const { expenses, budgets, departments, reimbursements } = store;
+    if (store.mode === "internal" && expenses.length === 0 && budgets.length === 0) return { from: "bot", text: "No authorized company financial records have been supplied yet. No sample transactions are included." };
     const month = DEMO_TODAY.slice(0, 7);
     if (t.includes("spent") && t.includes("month")) {
       const v = expenses.filter((e) => e.approvalStatus === "approved" && e.date.startsWith(month)).reduce((s, e) => s + e.amount, 0);
@@ -41,7 +42,8 @@ function Assistant() {
     }
     if (t.includes("department") && (t.includes("most") || t.includes("highest"))) {
       const ranked = departments.map((d) => ({ d, v: expenses.filter((e) => e.approvalStatus === "approved" && e.departmentId === d.id).reduce((s, e) => s + e.amount, 0) })).sort((a, b) => b.v - a.v);
-      return { from: "bot", text: `${ranked[0]!.d.name} has the highest approved spend at ${money(ranked[0]!.v)}, followed by ${ranked[1]!.d.name} (${money(ranked[1]!.v)}).` };
+      const first = ranked[0]; const second = ranked[1];
+      return { from: "bot", text: first ? `${first.d.name} has the highest visible approved spend at ${money(first.v)}${second ? `, followed by ${second.d.name} (${money(second.v)})` : ""}.` : "No authorized department spending available." };
     }
     if (t.includes("afford")) {
       const amt = Number(t.match(/\$?\s?(\d[\d,]*)/)?.[1]?.replace(/,/g, "")) || 2000;
@@ -70,7 +72,7 @@ function Assistant() {
 
   return (
     <>
-      <PageHeader title="AI CFO Assistant" badge={<DemoBadge>Answers from sample data</DemoBadge>} />
+      <PageHeader title="AI CFO Assistant" badge={<DemoBadge>{store.mode === "demo" ? "Answers from sample data" : "Authorized data only · rule-based"}</DemoBadge>} />
       <Panel className="flex h-[70vh] flex-col p-0">
         <div className="flex-1 space-y-4 overflow-auto p-5">
           {msgs.map((m, i) => (

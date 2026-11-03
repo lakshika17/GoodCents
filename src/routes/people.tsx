@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InternalAccess } from "@/components/internal-access";
 import { pageHead } from "@/lib/meta";
 
 export const Route = createFileRoute("/people")({
@@ -17,7 +18,8 @@ export const Route = createFileRoute("/people")({
 });
 
 function People() {
-  const { role } = useStore();
+  const { role, mode } = useStore();
+  if (mode === "internal") return <InternalAccess />;
   if (role !== "admin") return <Panel><p className="py-10 text-center text-sm text-muted-foreground">Switch to the Finance role to manage people and departments.</p></Panel>;
   return (
     <>
@@ -38,7 +40,7 @@ function EmployeesTab() {
   const name = (id: string | null) => employees.find((e) => e.id === id)?.name ?? "—";
   return (
     <Panel className="p-0" >
-      <div className="flex justify-end border-b p-3"><Button size="sm" onClick={() => setEdit({ id: uid("e"), name: "", email: "", title: "", role: "employee", departmentId: departments[0]!.id, managerId: null })}><Plus className="h-4 w-4" />Add employee</Button></div>
+      <div className="flex justify-end border-b p-3"><Button size="sm" onClick={() => setEdit({ id: uid("e"), name: "", email: "", title: "", role: "employee", departmentId: departments[0]?.id ?? "", managerId: null })}><Plus className="h-4 w-4" />Add employee</Button></div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-xs text-muted-foreground"><tr className="border-b"><th className="px-5 py-2.5 font-medium">Name</th><th className="px-3 font-medium">Department</th><th className="px-3 font-medium">Role</th><th className="px-3 font-medium">Manager</th><th className="px-5" /></tr></thead>

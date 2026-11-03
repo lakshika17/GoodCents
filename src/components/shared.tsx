@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { FlaskConical, PlugZap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ApprovalStatus, ReimbursementStatus } from "@/data/types";
+import { useStore } from "@/data/store";
 
 export function PageHeader({ title, description, actions, badge }: { title: string; description?: string; actions?: ReactNode; badge?: ReactNode }) {
   return (
@@ -65,8 +66,9 @@ export const reimbursementLabels: Record<ReimbursementStatus, string> = {
 const rbTone: Record<ReimbursementStatus, keyof typeof tones> = { awaiting_authorization: "warning", queued: "info", processing: "primary", paid: "success", failed: "danger" };
 export const ReimbursementBadge = ({ s }: { s: ReimbursementStatus }) => <Pill tone={rbTone[s]}>{reimbursementLabels[s]}</Pill>;
 
-export function DemoBadge({ children = "Demo data" }: { children?: ReactNode }) {
-  return <Pill tone="primary"><FlaskConical className="h-3 w-3" />{children}</Pill>;
+export function DemoBadge({ children }: { children?: ReactNode }) {
+  const { mode } = useStore();
+  return <Pill tone="primary"><FlaskConical className="h-3 w-3" />{children ?? (mode === "demo" ? "Demo data" : "Authorized records")}</Pill>;
 }
 export function NotConnected({ children }: { children: ReactNode }) {
   return (

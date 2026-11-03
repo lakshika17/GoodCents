@@ -15,7 +15,7 @@ export const Route = createFileRoute("/settings")({
 });
 
 function Settings() {
-  const { policy, setPolicy, role } = useStore();
+  const { policy, setPolicy, role, mode } = useStore();
   const [p, setP] = useState(policy);
   const canEdit = role === "admin";
   return (
@@ -35,7 +35,7 @@ function Settings() {
               const on = p.restrictedCategories.includes(c);
               return <button type="button" key={c} onClick={() => setP({ ...p, restrictedCategories: on ? p.restrictedCategories.filter((x) => x !== c) : [...p.restrictedCategories, c] })} className={`rounded-full border px-3 py-1 text-xs ${on ? "border-primary bg-accent text-accent-foreground" : "text-muted-foreground"}`}>{c}</button>;
             })}</div>
-            <Button onClick={() => { setPolicy(p); toast.success("Policy saved (demo)"); }}>Save policy</Button>
+            <Button onClick={async () => { await setPolicy(p); toast.success(mode === "demo" ? "Policy saved (demo)" : "Policy saved"); }}>Save policy</Button>
             {!canEdit && <p className="text-xs text-muted-foreground">Only Finance can change policies.</p>}
           </fieldset>
         </Panel>

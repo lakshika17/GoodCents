@@ -20,13 +20,13 @@ export const Route = createFileRoute("/budgets")({
 });
 
 function Budgets() {
-  const { budgets, expenses, departments, projects, employees, role, currentUser, upsertBudget, uid } = useStore();
+  const { budgets, expenses, departments, projects, employees, role, currentUser, upsertBudget, uid, mode } = useStore();
   const [edit, setEdit] = useState<Budget | null>(null);
-  const visible = role === "manager" ? budgets.filter((b) => b.departmentId === currentUser.departmentId) : budgets;
+  const visible = mode === "demo" && role === "manager" ? budgets.filter((b) => b.departmentId === currentUser.departmentId) : budgets;
   const canEdit = role === "admin";
   const chart = visible.map((b) => ({ name: b.name.split(" ")[0], Budget: b.amount, Actual: Math.round(budgetSpent(b, expenses)) }));
 
-  const blank = (): Budget => ({ id: uid("b"), name: "", departmentId: departments[0]!.id, projectId: null, ownerId: employees[0]!.id, amount: 0, period: "H2 2026", history: [] });
+  const blank = (): Budget => ({ id: uid("b"), name: "", departmentId: departments[0]?.id ?? currentUser.departmentId, projectId: null, ownerId: currentUser.id, amount: 0, period: "H2 2026", history: [] });
 
   return (
     <>
@@ -80,10 +80,10 @@ function Budgets() {
           );
         })}
       </div>
-      {edit && <BudgetDialog budget={edit} onClose={() => setEdit(null)} onSave={(b) => {
+      {edit && <BudgetDialog budget={edit} onClose={() => setEdit(null)} onSave={async (b) => {
         const prev = budgets.find((x) => x.id === b.id);
         const history = !prev ? [{ date: DEMO_TODAY, note: "Created", amount: b.amount }] : prev.amount !== b.amount ? [...b.history, { date: DEMO_TODAY, note: "Amount changed", amount: b.amount }] : b.history;
-        upsertBudget({ ...b, history }); setEdit(null); toast.success("Budget saved (demo)");
+        await upsertBudget({ ...b, history }); setEdit(null); toast.success(mode === "demo" ? "Budget saved (demo)" : "Budget saved");
       }} />}
     </>
   );

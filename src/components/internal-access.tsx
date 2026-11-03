@@ -1,0 +1,33 @@
+import { useState } from 'react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useServerFn } from '@tanstack/react-start';
+import { toast } from 'sonner';
+import { useStore } from '@/data/store';
+import { loadInternal, requestAccess, performInternal, inviteEmployee } from '@/data/internal.functions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Field, PageHeader, Panel, Pill, nativeSelect } from '@/components/shared';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+export function InternalAccess() {
+  const { employees, departments, projects, role } = useStore();
+  const fetch = useServerFn(loadInternal); const request = useServerFn(requestAccess); const perform = useServerFn(performInternal); const invite = useServerFn(inviteEmployee); const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ['internal'], queryFn: () => fetch() });
+  const [type, setType] = useState<'department'|'project'>('department'); const [target, setTarget] = useState(''); const [reason, setReason] = useState(''); const [note, setNote] = useState('');
+  const refresh = () => qc.invalidateQueries({ queryKey: ['internal'] });
+  const rows = (name: string) => (data?.tables[name] ?? []) as Record<string, any>[];
+  const act = async (fn: () => Promise<unknown>) => { try { await fn(); await refresh(); toast.success('Saved'); } catch (e) { toast.error(e instanceof Error ? e.message : 'Action failed'); } };
+  return <>
+    <PageHeader title="Employees & Departments" badge={<Pill tone="primary">Quantera · 5 employees</Pill>} />
+    <Tabs defaultValue="employees"><TabsList className="flex h-auto flex-wrap"><TabsTrigger value="employees">Employees</TabsTrigger><TabsTrigger value="departments">Departments</TabsTrigger><TabsTrigger value="projects">Projects</TabsTrigger><TabsTrigger value="access">Access requests</TabsTrigger>{role === 'admin' && <TabsTrigger value="audit">Audit activity</TabsTrigger>}</TabsList>
+      <TabsContent value="employees"><Panel className="overflow-x-auto p-0"><table className="w-full text-sm"><thead><tr className="border-b text-left text-xs text-muted-foreground"><th className="p-4">Employee</th><th className="p-4">Department</th><th className="p-4">Access role</th><th className="p-4">Reports to</th><th /></tr></thead><tbody>{employees.map(e => <tr key={e.id} className="border-b"><td className="p-4"><p className="font-medium">{e.name}</p><p className="text-xs text-muted-foreground">{e.id} · {e.title}</p><p className="text-xs text-muted-foreground">{e.email}</p></td><td className="p-4">{departments.find(d => d.id === e.departmentId)?.name}<p className="text-xs text-muted-foreground">{e.departmentId}</p></td><td className="p-4">{e.role === 'admin' ? 'Founder' : 'Manager'}</td><td className="p-4">{employees.find(m => m.id === e.managerId)?.name ?? '—'}</td><td className="p-4">{role === 'admin' && <Button variant="outline" size="sm" onClick={() => void act(() => invite({ data: { employeeId: e.id, origin: window.location.origin } }))}>Invite</Button>}</td></tr>)}</tbody></table></Panel></TabsContent>
+      <TabsContent value="departments"><div className="grid gap-3 md:grid-cols-2">{departments.map(d => <Panel key={d.id} title={d.name}><p className="text-sm text-muted-foreground">{d.id} · Manager: {employees.find(e => e.id === d.managerId)?.name}</p></Panel>)}</div></TabsContent>
+      <TabsContent value="projects"><Panel title="Authorized projects">{projects.length ? projects.map(p => <p key={p.id}>{p.name}</p>) : <p className="text-sm text-muted-foreground">No company projects have been supplied yet.</p>}</Panel></TabsContent>
+      <TabsContent value="access"><Panel title="Request access"><form className="grid gap-3" onSubmit={e => { e.preventDefault(); void act(async () => { await request({ data: { type, target, reason } }); setReason(''); }); }}><div className="grid gap-3 sm:grid-cols-2"><Field label="Access to"><select className={nativeSelect} value={type} onChange={e => { setType(e.target.value as 'department'|'project'); setTarget(''); }}><option value="department">Department</option><option value="project">Project</option></select></Field><Field label="Department or project"><select required className={nativeSelect} value={target} onChange={e => setTarget(e.target.value)}><option value="">Select…</option>{(type === 'department' ? departments : projects).map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></Field></div><Field label="Reason"><Textarea required maxLength={1000} value={reason} onChange={e => setReason(e.target.value)} /></Field><Button type="submit" disabled={!target || !reason.trim()}>Request access</Button></form></Panel>
+      {role === 'admin' && <Field label="Decision note"><Input className="my-3" maxLength={1000} value={note} onChange={e => setNote(e.target.value)} /></Field>}
+      <Panel title="Request history" className="mt-4">{rows('access_requests').length === 0 && <p className="text-sm text-muted-foreground">No access requests.</p>}{rows('access_requests').map(r => <div key={r["id"]} className="flex flex-wrap items-center justify-between gap-3 border-b py-3"><div><p className="text-sm font-medium">{departments.find(d => d.id === r["department_id"])?.name ?? projects.find(p => p.id === r["project_id"])?.name ?? r["project_id"]}</p><p className="text-sm text-muted-foreground">{r["reason"]}</p><p className="text-xs text-muted-foreground">{r["created_at"]} · {r["decision_note"]}</p></div><div className="flex gap-2"><Pill>{r["status"]}</Pill>{role === 'admin' && (r["status"] === 'pending' ? ['approved','rejected'] : r["status"] === 'approved' ? ['revoked'] : []).map(decision => <Button key={decision} variant="outline" size="sm" onClick={() => void act(() => perform({ data: { action: 'access_decision', payload: { id: r["id"], decision: decision as 'approved'|'rejected'|'revoked', note } } }))}>{decision === 'approved' ? 'Approve' : decision === 'rejected' ? 'Reject' : 'Revoke'}</Button>)}</div></div>)}</Panel></TabsContent>
+      <TabsContent value="audit"><Panel title="Audit activity">{rows('audit_log').map(r => <div key={r["id"]} className="border-b py-2 text-sm"><p>{r["action"].replaceAll('_',' ')} · {r["target_id"]}</p><p className="text-xs text-muted-foreground">{r["created_at"]}</p></div>)}</Panel></TabsContent>
+    </Tabs>
+  </>;
+}

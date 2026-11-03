@@ -12,11 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as AssistantRouteImport } from './routes/assistant'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BudgetsRouteImport } from './routes/budgets'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as NegotiatorRouteImport } from './routes/negotiator'
 import { Route as PeopleRouteImport } from './routes/people'
 import { Route as ReimbursementsRouteImport } from './routes/reimbursements'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TimeMachineRouteImport } from './routes/time-machine'
 
@@ -35,9 +38,19 @@ const AssistantRoute = AssistantRouteImport.update({
   path: '/assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetsRoute = BudgetsRouteImport.update({
   id: '/budgets',
   path: '/budgets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpensesRoute = ExpensesRouteImport.update({
@@ -60,6 +73,11 @@ const ReimbursementsRoute = ReimbursementsRouteImport.update({
   path: '/reimbursements',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -75,11 +93,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/assistant': typeof AssistantRoute
+  '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/demo': typeof DemoRoute
   '/expenses': typeof ExpensesRoute
   '/negotiator': typeof NegotiatorRoute
   '/people': typeof PeopleRoute
   '/reimbursements': typeof ReimbursementsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/time-machine': typeof TimeMachineRoute
 }
@@ -87,11 +108,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/assistant': typeof AssistantRoute
+  '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/demo': typeof DemoRoute
   '/expenses': typeof ExpensesRoute
   '/negotiator': typeof NegotiatorRoute
   '/people': typeof PeopleRoute
   '/reimbursements': typeof ReimbursementsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/time-machine': typeof TimeMachineRoute
 }
@@ -100,11 +124,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/assistant': typeof AssistantRoute
+  '/auth': typeof AuthRoute
   '/budgets': typeof BudgetsRoute
+  '/demo': typeof DemoRoute
   '/expenses': typeof ExpensesRoute
   '/negotiator': typeof NegotiatorRoute
   '/people': typeof PeopleRoute
   '/reimbursements': typeof ReimbursementsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/time-machine': typeof TimeMachineRoute
 }
@@ -114,11 +141,14 @@ export interface FileRouteTypes {
     | '/'
     | '/approvals'
     | '/assistant'
+    | '/auth'
     | '/budgets'
+    | '/demo'
     | '/expenses'
     | '/negotiator'
     | '/people'
     | '/reimbursements'
+    | '/reset-password'
     | '/settings'
     | '/time-machine'
   fileRoutesByTo: FileRoutesByTo
@@ -126,11 +156,14 @@ export interface FileRouteTypes {
     | '/'
     | '/approvals'
     | '/assistant'
+    | '/auth'
     | '/budgets'
+    | '/demo'
     | '/expenses'
     | '/negotiator'
     | '/people'
     | '/reimbursements'
+    | '/reset-password'
     | '/settings'
     | '/time-machine'
   id:
@@ -138,11 +171,14 @@ export interface FileRouteTypes {
     | '/'
     | '/approvals'
     | '/assistant'
+    | '/auth'
     | '/budgets'
+    | '/demo'
     | '/expenses'
     | '/negotiator'
     | '/people'
     | '/reimbursements'
+    | '/reset-password'
     | '/settings'
     | '/time-machine'
   fileRoutesById: FileRoutesById
@@ -151,11 +187,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApprovalsRoute: typeof ApprovalsRoute
   AssistantRoute: typeof AssistantRoute
+  AuthRoute: typeof AuthRoute
   BudgetsRoute: typeof BudgetsRoute
+  DemoRoute: typeof DemoRoute
   ExpensesRoute: typeof ExpensesRoute
   NegotiatorRoute: typeof NegotiatorRoute
   PeopleRoute: typeof PeopleRoute
   ReimbursementsRoute: typeof ReimbursementsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   TimeMachineRoute: typeof TimeMachineRoute
 }
@@ -183,11 +222,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budgets': {
       id: '/budgets'
       path: '/budgets'
       fullPath: '/budgets'
       preLoaderRoute: typeof BudgetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expenses': {
@@ -218,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReimbursementsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -239,11 +299,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApprovalsRoute: ApprovalsRoute,
   AssistantRoute: AssistantRoute,
+  AuthRoute: AuthRoute,
   BudgetsRoute: BudgetsRoute,
+  DemoRoute: DemoRoute,
   ExpensesRoute: ExpensesRoute,
   NegotiatorRoute: NegotiatorRoute,
   PeopleRoute: PeopleRoute,
   ReimbursementsRoute: ReimbursementsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   TimeMachineRoute: TimeMachineRoute,
 }
