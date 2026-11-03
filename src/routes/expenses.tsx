@@ -55,7 +55,7 @@ function Expenses() {
                     <td className="whitespace-nowrap px-3">{employees.find((x) => x.id === e.employeeId)?.name}</td>
                     <td className="whitespace-nowrap px-3 text-muted-foreground">{departments.find((d) => d.id === e.departmentId)?.name}</td>
                     <td className="whitespace-nowrap px-3 text-muted-foreground">{e.category}</td>
-                    <td className="px-3"><span className="flex items-center gap-2"><ApprovalBadge s={e.approvalStatus} />{e.approvalStatus === "pending" && e.employeeId === currentUser.id && <button className="text-xs text-destructive hover:underline" onClick={() => { if (window.confirm(`Void ${e.vendor} ${money(e.amount, 2)}? This removes it and its approval request.`)) { voidExpense(e.id); toast.success("Expense voided and removed from the approval queue"); } }}>Void</button>}</span></td>
+                    <td className="px-3"><span className="flex items-center gap-2"><ApprovalBadge s={e.approvalStatus} />{e.approvalStatus === "pending" && e.employeeId === currentUser.id && e.documentType && <button className="text-xs text-destructive hover:underline" onClick={() => { if (window.confirm(`Void ${e.vendor} ${money(e.amount, 2)}? This removes it and its approval request.`)) { voidExpense(e.id); toast.success("Expense voided and removed from the approval queue"); } }}>Void</button>}</span></td>
                     <td className="px-3">{rb ? <ReimbursementBadge s={rb.status} /> : <span className="text-xs text-muted-foreground">—</span>}</td>
                     <td className="px-5 text-right font-medium tabular-nums">{money(e.amount, 2)}</td>
                   </tr>

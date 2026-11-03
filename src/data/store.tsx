@@ -68,7 +68,7 @@ function useStoreValue() {
   const voidExpense = useCallback((expenseId: string) => {
     set((st) => {
       const exp = st.expenses.find((e) => e.id === expenseId);
-      if (!exp || exp.employeeId !== currentUser.id || exp.approvalStatus !== "pending") return st;
+      if (!exp || !exp.documentType || exp.employeeId !== currentUser.id || exp.approvalStatus !== "pending") return st;
       const r = st.receipts.find((x) => x.id === exp.receiptId);
       const record: SavedDocument = { id: uid("doc"), employeeId: exp.employeeId, documentType: exp.documentType ?? "Paid Receipt", status: "void", vendor: exp.vendor, amount: exp.amount, date: exp.date, category: exp.category, departmentId: exp.departmentId, projectId: exp.projectId, description: exp.description, verified: exp.verified ?? false, fileName: r?.fileName ?? null, fileType: r?.fileType ?? null, previewUrl: r?.previewUrl ?? null, createdAt: today() };
       return {
