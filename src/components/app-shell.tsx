@@ -13,6 +13,8 @@ import { useStore } from "@/data/store";
 import type { Role } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { SubmitExpenseDialog } from "./submit-expense-dialog";
+import { DEMO_PREVIEWS, isDemoPreview } from '@/data/demo-preview';
+import { nativeSelect } from './shared';
 
 type NavItem = { to: string; label: string; icon: typeof Bell; roles?: Role[]; optional?: boolean };
 const nav: NavItem[] = [
@@ -62,25 +64,19 @@ function Brand() {
 }
 
 function RoleSwitcher() {
-  const { role, setRole, currentUser, mode } = useStore();
+  const { role, preview, setPreview, currentUser, mode } = useStore();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const roles: Role[] = ["employee", "manager", "admin"];
-  if (mode === "internal") return <div className="flex items-center gap-2"><div className="text-right text-xs"><p className="font-medium">{currentUser.name}</p><p className="text-muted-foreground">{role === "admin" ? "Founder" : "Manager"}</p></div><Button variant="outline" size="sm" onClick={async () => { await qc.cancelQueries(); qc.clear(); await supabase.auth.signOut(); await navigate({ to: "/auth", replace: true }); }}>Sign out</Button></div>;
+  if (mode === "internal") return <div className="flex items-center gap-2"><div className="text-right text-xs"><p className="font-medium">{currentUser.name}</p><p className="text-muted-foreground">{role === "admin" ? "Founder" : role === "manager" ? "Manager" : "Employee"}</p></div><Button variant="outline" size="sm" onClick={() => void navigate({ to: '/demo' })}>Demo preview</Button><Button variant="outline" size="sm" onClick={async () => { await qc.cancelQueries(); qc.clear(); await supabase.auth.signOut(); await navigate({ to: "/auth", replace: true }); }}>Sign out</Button></div>;
   return (
     <div className="flex items-center gap-2">
       <div className="hidden text-right text-xs leading-tight md:block">
         <p className="font-medium text-foreground">{currentUser.name}</p>
-        <p className="text-muted-foreground">Demo role</p>
+        <p className="text-muted-foreground">Fictional demo preview</p>
       </div>
-      <div className="flex rounded-lg border bg-muted p-0.5">
-        {roles.map((r) => (
-          <button key={r} onClick={() => setRole(r)}
-            className={cn("rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors", role === r ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>
-            {r === "admin" ? "Finance" : r}
-          </button>
-        ))}
-      </div>
+      <select aria-label="Fictional demo preview" className={cn(nativeSelect, 'max-w-44')} value={preview} onChange={event => { if (isDemoPreview(event.target.value)) setPreview(event.target.value); }}>
+        {Object.entries(DEMO_PREVIEWS).map(([key, item]) => <option key={key} value={key}>{item.label} · Demo</option>)}
+      </select>
     </div>
   );
 }
