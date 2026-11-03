@@ -77,7 +77,7 @@ function ReviewCard({ e }: { e: Expense }) {
         </div>
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div><h2 className="text-xl font-semibold">{e.vendor}</h2><p className="text-sm text-muted-foreground">{e.description}</p>{e.documentType && <p className="mt-1 text-xs text-muted-foreground">{e.documentType}{e.verified === false ? " · not verified" : e.verified ? " · verified by submitter" : ""}</p>}</div>
+            <div><h2 className="text-xl font-semibold">{e.vendor}</h2><p className="text-sm text-muted-foreground">{e.description}</p>{e.documentType && <p className="mt-1 text-xs text-muted-foreground">{e.documentType} · {e.currency ?? "USD"} · {e.source === "ai" ? "AI-extracted" : e.source === "ai_corrected" ? "AI-extracted, corrected" : "manually entered"}{e.verified === false ? " · not verified" : e.verified ? " · verified by submitter" : ""}</p>}</div>
             <p className="font-display text-2xl font-semibold">{money(e.amount, 2)}</p>
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">

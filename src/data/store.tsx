@@ -70,7 +70,7 @@ function useStoreValue() {
       const exp = st.expenses.find((e) => e.id === expenseId);
       if (!exp || !exp.documentType || exp.employeeId !== currentUser.id || exp.approvalStatus !== "pending") return st;
       const r = st.receipts.find((x) => x.id === exp.receiptId);
-      const record: SavedDocument = { id: uid("doc"), employeeId: exp.employeeId, documentType: exp.documentType ?? "Paid Receipt", status: "void", vendor: exp.vendor, amount: exp.amount, date: exp.date, category: exp.category, departmentId: exp.departmentId, projectId: exp.projectId, description: exp.description, verified: exp.verified ?? false, fileName: r?.fileName ?? null, fileType: r?.fileType ?? null, previewUrl: r?.previewUrl ?? null, createdAt: today() };
+      const record: SavedDocument = { id: uid("doc"), employeeId: exp.employeeId, documentType: exp.documentType ?? "Paid Receipt", status: "void", vendor: exp.vendor, amount: exp.amount, date: exp.date, category: exp.category, departmentId: exp.departmentId, projectId: exp.projectId, description: exp.description, verified: exp.verified ?? false, currency: exp.currency ?? "USD", source: exp.source ?? "manual", documentNumber: "", fileName: r?.fileName ?? null, fileType: r?.fileType ?? null, previewUrl: r?.previewUrl ?? null, createdAt: today() };
       return {
         ...st,
         expenses: st.expenses.filter((e) => e.id !== expenseId),
@@ -91,7 +91,8 @@ function useStoreValue() {
         expenses: st.expenses.map((e) => (e.id === expenseId ? { ...e, approvalStatus: decision } : e)),
         approvals: [{ id: uid("a"), expenseId, managerId: currentUser.id, decision, comment, date: today() }, ...st.approvals],
       };
-      if (decision === "approved") {
+      // Unverified documents never enter the reimbursement process.
+      if (decision === "approved" && exp.verified !== false) {
         next.reimbursements = [{ id: uid("rb"), expenseId, employeeId: exp.employeeId, amount: exp.amount, status: "awaiting_authorization", paypalReference: null, authorizedBy: null, history: [{ date: today(), status: "awaiting_authorization", note: "Created on approval" }] }, ...next.reimbursements];
       }
       const msg = decision === "approved" ? "approved" : decision === "rejected" ? "rejected" : "returned for changes";
@@ -216,7 +217,7 @@ function InternalProvider({ children }: { children: ReactNode }) {
     saveDocument: () => { toast.error('Drafts, quotes and other non-expense documents cannot be saved to company records yet.'); },
     voidDocument: () => { toast.error('Voiding company records is not available yet.'); },
     voidExpense: () => { toast.error('Voiding company records is not available yet.'); },
-    submitExpense: async ({ documentType: _t, verified: _v, ...e }, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
+    submitExpense: async ({ documentType: _t, verified: _v, currency: _c, source: _s, ...e }, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
     decide: (id, decision, comment) => mutate('decision', { id, decision, comment }),
     respondToChanges: (id, response, patch) => mutate('respond', { id, response, amount: patch.amount }),
     setReimbursementStatus: (id, status) => mutate('reimbursement', { id, status }),
