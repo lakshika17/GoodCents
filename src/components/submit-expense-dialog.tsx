@@ -37,7 +37,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const attempts = useRef(new ExtractionAttempt());
-  const submissionKey = useRef(crypto.randomUUID());
+  const submissionKey = useRef<string>(crypto.randomUUID());
   const uploadDone = useRef(false);
   const pendingStorageKey = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
