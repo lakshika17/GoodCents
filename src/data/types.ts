@@ -23,6 +23,9 @@ export interface Expense {
   receiptId: string | null; approvalStatus: ApprovalStatus; submittedAt: string;
   documentType?: DocumentType | undefined; verified?: boolean | undefined;
   currency?: string | undefined; source?: DetailSource | undefined;
+  documentNumber?: string | null; submissionKey?: string; version?: number;
+  paymentResponsibility?: 'employee_paid' | 'company_paid' | 'unpaid_supplier' | 'unknown'; paymentEvidenceConfirmed?: boolean;
+  confirmedBy?: string | null; confirmedAt?: string | null;
 }
 export interface Receipt { id: string; fileName: string; fileType: string; previewUrl: string | null; extractionSimulated: boolean; storagePath?: string | undefined }
 
