@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 const PUBLIC_PATHS = ["/auth", "/reset-password", "/demo"];
 /** Public screens render without the app shell or financial data provider. Tolerates trailing slashes. */
 export function isPublicPath(path: string) {
-  const p = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  const clean = (path.split(/[?#]/)[0] || "/").toLowerCase();
+  const p = clean.length > 1 ? clean.replace(/\/+$/, "") : clean;
   return PUBLIC_PATHS.includes(p);
 }

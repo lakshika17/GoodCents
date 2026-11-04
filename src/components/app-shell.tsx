@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useStore } from "@/data/store";
+import { useOptionalStore, useStore } from "@/data/store";
 import type { Role } from "@/data/types";
 import { cn } from "@/lib/utils";
 import { SubmitExpenseDialog } from "./submit-expense-dialog";
@@ -114,7 +114,11 @@ function Notifications() {
   );
 }
 
+/** Renders the financial shell only when a store exists; public screens (demo, sign-in) never crash here. */
 export function AppShell({ children }: { children: ReactNode }) {
+  return useOptionalStore() ? <FinancialShell>{children}</FinancialShell> : <>{children}</>;
+}
+function FinancialShell({ children }: { children: ReactNode }) {
   const { mode } = useStore();
   const [open, setOpen] = useState(false);
   const [submit, setSubmit] = useState(false);
