@@ -1,6 +1,6 @@
 # Quantera internal access update
 - [x] Repair persistent document contract, extraction races, idempotency, storage recovery, and approval integrity; run isolated PostgreSQL and existing regressions.
-- [ ] Run persistent internal-path browser acceptance with isolated employee/manager identities. Blocked: only company-connected preview is available; local PostgreSQL equivalent has no hosted auth/Storage/HTTP stack.
+- [ ] Run persistent internal-path browser acceptance with isolated employee/manager identities. In progress: handed to an isolated draft (own test database, no company data) with the full acceptance scope; main-project preview stays company-connected and must not be used for test writes.
 - [x] Replace demo/development team references with all five exact workbook employees, default to Lakshika, preserve sample financial math and authentication, and inspect all ten screens.
 - [x] Explain how to invite Zichen as project Editor without ownership transfer or company-data access.
 - [x] Deliver beginner-friendly current-interface guide, readiness checklist, integration responsibilities, and pre-upload verification requirements.
