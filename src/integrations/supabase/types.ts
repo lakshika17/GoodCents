@@ -236,6 +236,21 @@ export type Database = {
           },
         ]
       }
+      cancelled_submissions: {
+        Row: {
+          actor_id: string
+          submission_key: string
+        }
+        Insert: {
+          actor_id: string
+          submission_key: string
+        }
+        Update: {
+          actor_id?: string
+          submission_key?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           id: string
@@ -331,31 +346,46 @@ export type Database = {
       }
       expenses: {
         Row: {
+          amount_cents: number | null
           approval_status: string
           data: Json
           department_id: string
+          document_version: number
           employee_id: string
           id: string
           organization_id: string
           project_id: string | null
+          submission_actor: string | null
+          submission_key: string | null
+          submission_payload: Json | null
         }
         Insert: {
+          amount_cents?: number | null
           approval_status?: string
           data: Json
           department_id: string
+          document_version?: number
           employee_id: string
           id: string
           organization_id?: string
           project_id?: string | null
+          submission_actor?: string | null
+          submission_key?: string | null
+          submission_payload?: Json | null
         }
         Update: {
+          amount_cents?: number | null
           approval_status?: string
           data?: Json
           department_id?: string
+          document_version?: number
           employee_id?: string
           id?: string
           organization_id?: string
           project_id?: string | null
+          submission_actor?: string | null
+          submission_key?: string | null
+          submission_payload?: Json | null
         }
         Relationships: [
           {
@@ -579,9 +609,17 @@ export type Database = {
       can_department: { Args: { _department: string }; Returns: boolean }
       can_expense: { Args: { _expense: string }; Returns: boolean }
       can_project: { Args: { _project: string }; Returns: boolean }
+      cancel_expense_submission: {
+        Args: { submission_key: string }
+        Returns: boolean
+      }
       current_employee: { Args: never; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       internal_action: {
+        Args: { action: string; payload: Json }
+        Returns: undefined
+      }
+      internal_action_legacy: {
         Args: { action: string; payload: Json }
         Returns: undefined
       }
@@ -593,6 +631,8 @@ export type Database = {
           project_id: string
         }[]
       }
+      submission_status: { Args: { submission_key: string }; Returns: Json }
+      validate_expense_document: { Args: { p: Json }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

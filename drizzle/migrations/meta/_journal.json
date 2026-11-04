@@ -29,6 +29,13 @@
       "when": 1793692882203,
       "tag": "0003_owner_work_email_developer_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793772088375,
+      "tag": "0004_confirmed_idempotent_receipt_workflow",
+      "breakpoints": true
     }
   ]
 }
