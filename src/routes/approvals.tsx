@@ -9,6 +9,7 @@ import { ApprovalBadge, DemoBadge, PageHeader, Panel, Pill } from "@/components/
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from '@/components/ui/checkbox';
 import { pageHead } from "@/lib/meta";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +78,7 @@ function ReviewCard({ e }: { e: Expense }) {
         </div>
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div><h2 className="text-xl font-semibold">{e.vendor}</h2><p className="text-sm text-muted-foreground">{e.description}</p>{e.documentType && <p className="mt-1 text-xs text-muted-foreground">{e.documentType} · {e.currency ?? "USD"} · {e.source === "ai" ? "AI-extracted" : e.source === "ai_corrected" ? "AI-extracted, corrected" : "manually entered"}{e.verified === false ? " · not verified" : e.verified ? " · verified by submitter" : ""}</p>}</div>
+            <div><h2 className="text-xl font-semibold">{e.vendor}</h2><p className="text-sm text-muted-foreground">{e.description}</p>{e.documentType && <p className="mt-1 text-xs text-muted-foreground">{e.documentType} · {e.currency ?? "Unknown currency"} · {e.documentNumber ?? 'No document number'} · {e.source === "ai" ? "AI-extracted" : e.source === "ai_corrected" ? "AI-extracted, corrected" : "manually entered"}{e.verified === true ? " · confirmed by submitter" : " · not confirmed"}</p>}</div>
             <p className="font-display text-2xl font-semibold">{money(e.amount, 2)}</p>
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
@@ -99,7 +100,7 @@ function ReviewCard({ e }: { e: Expense }) {
           </div>
           <Textarea className="mt-4" placeholder="Comment (required when requesting changes)" value={comment} onChange={(ev) => setComment(ev.target.value)} />
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button onClick={() => act("approved")}><Check className="h-4 w-4" />Approve</Button>
+            <Button disabled={e.verified !== true} onClick={() => void act("approved")}><Check className="h-4 w-4" />Approve</Button>
             <Button variant="outline" onClick={() => act("changes_requested")}><MessageSquare className="h-4 w-4" />Request changes</Button>
             <Button variant="outline" className="text-destructive" onClick={() => act("rejected")}><X className="h-4 w-4" />Reject</Button>
           </div>
@@ -125,7 +126,7 @@ function EmployeeDecisions() {
                 <ApprovalBadge s={e.approvalStatus} />
               </div>
               {a && a.comment && <p className="mt-2 rounded-md bg-muted px-3 py-2 text-sm"><span className="font-medium">Manager:</span> {a.comment}</p>}
-              {e.approvalStatus === "changes_requested" && <ChangeResponse e={e} onSend={(msg, amount) => { respondToChanges(e.id, msg, { amount }); toast.success("Resubmitted for approval"); }} />}
+              {e.approvalStatus === "changes_requested" && <ChangeResponse e={e} onSend={async (msg, amount) => { await respondToChanges(e.id, msg, { amount, verified: true }); toast.success("Resubmitted for approval"); }} />}
             </Panel>
           );
         })}
@@ -137,11 +138,13 @@ function EmployeeDecisions() {
 function ChangeResponse({ e, onSend }: { e: Expense; onSend: (msg: string, amount: number) => void }) {
   const [msg, setMsg] = useState("");
   const [amount, setAmount] = useState(String(e.amount));
+  const [confirmed, setConfirmed] = useState(false);
   return (
     <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_140px_auto]">
       <Input placeholder="Your response" value={msg} onChange={(ev) => setMsg(ev.target.value)} />
-      <Input type="number" value={amount} onChange={(ev) => setAmount(ev.target.value)} aria-label="Corrected amount" />
-      <Button disabled={!msg.trim()} onClick={() => onSend(msg, Number(amount) || e.amount)}>Resubmit</Button>
+      <Input type="number" step="0.01" value={amount} onChange={(ev) => { setAmount(ev.target.value); setConfirmed(false); }} aria-label="Corrected amount" />
+      <label className="flex items-center gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} />I confirmed the corrected amount against my payment evidence.</label>
+      <Button disabled={!msg.trim() || !confirmed} onClick={() => onSend(msg, Number(amount))}>Resubmit</Button>
     </div>
   );
 }
