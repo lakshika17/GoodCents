@@ -7,7 +7,7 @@
 - [x] Provision lakshika.sarupria@quantera.as as a verified account linked to EMP-005 with development Admin eligibility; dashboard verified with a test session.
 - [ ] Confirm Lakshika's own "Sign in with Lovable" click completes. Waits on: Lakshika signing in herself.
 - [ ] Invite Zichen as project Editor and provision verified development app access. Blocked: project collaboration invitation requires owner action; his app identity is not verified.
-- [ ] Read the separate backend repository and its database, then report how to integrate it. Waits on: the repo URL and read access.
+- [ ] Read the separate backend repository and its database, then report how to integrate it. Waits on: the repo URL; private repos need a ZIP upload because this workspace role cannot create connector connections.
 - [x] Enable Cloud and invitation-only employee sign-in.
 - [x] Configure five workbook employees and departments with separate roles.
 - [x] Implement organization/department/project permissions, private receipts, audit history, and access requests.
