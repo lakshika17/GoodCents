@@ -9,7 +9,7 @@ describe('internal payment and access rules', () => {
     expect(actionSchema.safeParse({ action: 'role', payload: { role: 'founder' } }).success).toBe(false);
   });
   it('keeps approval decisions independent of payment state', () => {
-    expect(actionSchema.parse({ action: 'decision', payload: { id: 'x-1', decision: 'approved', comment: '' , status: 'paid' } }).payload).not.toHaveProperty('status');
+    expect(actionSchema.parse({ action: 'decision', payload: { id: 'x-1', version: 1, decision: 'approved', comment: '' , status: 'paid' } }).payload).not.toHaveProperty('status');
   });
   it('rejects fabricated negative expense amounts', () => {
     expect(actionSchema.safeParse({ action: 'expense', payload: { vendor: 'Test', amount: -1, date: '2026-11-03', category: 'Office', departmentId: 'DEP-005', projectId: null, description: '' } }).success).toBe(false);
