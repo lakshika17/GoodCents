@@ -3,12 +3,12 @@ const sql=postgres({host:process.env['RECEIPT_TEST_SOCKET'] ?? '/tmp/receipt-pg'
 const A='11111111-1111-4111-8111-111111111111',M='22222222-2222-4222-8222-222222222222',B='33333333-3333-4333-8333-333333333333';
 const p={submissionKey:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',vendor:'Corrected Fictional Vendor',amount:312.38,currency:'USD',date:'2026-10-07',documentType:'Paid Receipt',documentNumber:'TEST-40796',source:'ai_corrected',verified:true,paymentResponsibility:'employee_paid',paymentEvidenceConfirmed:true,category:'Office',departmentId:'TEST-A',projectId:null,description:'Isolated test',receipt:{fileName:'test.pdf',fileType:'application/pdf',storagePath:`${A}/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`}};
 let checks=0;
-function ok(v:any,n:string){if(!v)throw Error(n);checks++;console.log('PASS',n)}
-async function as(id:string,fn:any){return sql.begin(async tx=>{await tx.unsafe('SET LOCAL ROLE authenticated');await tx`select set_config('request.jwt.claim.sub',${id},true)`;return fn(tx)})}
-async function call(id:string,action:string,payload:any){return as(id,tx=>tx`select public.internal_action(${action},${tx.json(payload)})`)}
-async function reject(fn:any,n:string){try{await fn()}catch{ok(true,n);return}throw Error('Expected rejection: '+n)}
+function ok(v,n){if(!v)throw Error(n);checks++;console.log('PASS',n)}
+async function as(id,fn){return sql.begin(async tx=>{await tx.unsafe('SET LOCAL ROLE authenticated');await tx`select set_config('request.jwt.claim.sub',${id},true)`;return fn(tx)})}
+async function call(id,action,payload){return as(id,tx=>tx`select public.internal_action(${action},${tx.json(payload)})`)}
+async function reject(fn,n){try{await fn()}catch{ok(true,n);return}throw Error('Expected rejection: '+n)}
 try {
- for(const [patch,n] of [[{currency:null},'unknown currency'],[{date:'2026-02-30'},'calendar date'],[{amount:312.381},'precision'],[{verified:false},'confirmation'],[{documentType:'Vendor Quote'},'quote'],[{paymentResponsibility:'company_paid'},'company paid'],[{paymentResponsibility:'unpaid_supplier'},'unpaid invoice'],[{paymentResponsibility:'unknown'},'unknown payer'],[{amount:null},'missing amount']] as any)await reject(()=>call(A,'expense',{...p,...patch}),n);
+ for(const [patch,n] of [[{currency:null},'unknown currency'],[{date:'2026-02-30'},'calendar date'],[{amount:312.381},'precision'],[{verified:false},'confirmation'],[{documentType:'Vendor Quote'},'quote'],[{paymentResponsibility:'company_paid'},'company paid'],[{paymentResponsibility:'unpaid_supplier'},'unpaid invoice'],[{paymentResponsibility:'unknown'},'unknown payer'],[{amount:null},'missing amount']])await reject(()=>call(A,'expense',{...p,...patch}),n);
  await Promise.all([call(A,'expense',p),call(A,'expense',p),call(A,'expense',p)]);
  const [x]=await sql`select * from expenses where submission_key=${p.submissionKey}`;
  ok((await sql`select * from expenses`).length===1,'concurrent identical submissions create one expense');
