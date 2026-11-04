@@ -18,7 +18,7 @@ const PROMPT = `Read this financial document for Quantera Analytical and report 
 - documentType: one of ${DOCUMENT_TYPES.join(", ")}. A "Quote"/"Quotation" is a Vendor Quote. Use null if unclear.
 - counterparty: the vendor (or customer, for customer documents) company name exactly as printed.
 - amount: the document's grand total as a number (no currency symbols). Keep the precision shown.
-- currency: ISO code such as USD if shown or clearly implied, else null.
+- currency: ISO code only when printed explicitly and unambiguously, else null. A bare dollar sign does not establish USD.
 - date: the document's issue date as YYYY-MM-DD.
 - documentNumber: quote/invoice/PO number if shown.
 - notes: one short sentence about anything uncertain.
@@ -48,7 +48,7 @@ export async function extractDocument(input: { fileName: string; mimeType: strin
       model: provider.responses("openai/gpt-6-astra"),
       output: Output.object({ schema: extractionSchema }),
       messages: [{ role: "user", content: [{ type: "text", text: PROMPT }, file] }],
-      ...(signal ? { abortSignal: signal } : {}),
+      abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25_000)]) : AbortSignal.timeout(25_000),
       providerOptions: { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
     });
     const data = await result.output;
