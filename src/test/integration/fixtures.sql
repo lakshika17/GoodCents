@@ -1,0 +1,5 @@
+INSERT INTO public.departments VALUES('TEST-A','quantera','Test A','TEST-M'),('TEST-B','quantera','Test B',NULL);
+INSERT INTO public.employees(id,name,email,title,department_id,access_role) VALUES('TEST-A','Test Employee','employee@example.invalid','Tester','TEST-A','Employee'),('TEST-M','Test Manager','manager@example.invalid','Tester','TEST-A','Manager'),('TEST-B','Other Employee','other@example.invalid','Tester','TEST-B','Employee');
+INSERT INTO auth.users VALUES('11111111-1111-4111-8111-111111111111','employee@example.invalid',now()),('22222222-2222-4222-8222-222222222222','manager@example.invalid',now()),('33333333-3333-4333-8333-333333333333','other@example.invalid',now());
+INSERT INTO public.budgets(id,department_id,data) VALUES('TEST-BUDGET','TEST-A','{"id":"TEST-BUDGET","departmentId":"TEST-A","projectId":null,"amount":1000,"name":"Test budget","period":"2026"}');
+INSERT INTO storage.objects(bucket_id,name,owner_id,metadata) VALUES('private-receipts','11111111-1111-4111-8111-111111111111/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','{"mimetype":"application/pdf","size":100}');

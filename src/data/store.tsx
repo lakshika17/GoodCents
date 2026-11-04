@@ -93,7 +93,7 @@ function useStoreValue() {
         approvals: [{ id: uid("a"), expenseId, managerId: currentUser.id, decision, comment, date: today() }, ...st.approvals],
       };
       // Unverified documents never enter the reimbursement process.
-      if (decision === "approved" && exp.verified !== false) {
+      if (decision === "approved" && exp.verified === true && !st.reimbursements.some(r => r.expenseId === exp.id)) {
         next.reimbursements = [{ id: uid("rb"), expenseId, employeeId: exp.employeeId, amount: exp.amount, status: "awaiting_authorization", paypalReference: null, authorizedBy: null, history: [{ date: today(), status: "awaiting_authorization", note: "Created on approval" }] }, ...next.reimbursements];
       }
       const msg = decision === "approved" ? "approved" : decision === "rejected" ? "rejected" : "returned for changes";
@@ -218,9 +218,9 @@ function InternalProvider({ children }: { children: ReactNode }) {
     saveDocument: () => { toast.error('Drafts, quotes and other non-expense documents cannot be saved to company records yet.'); },
     voidDocument: () => { toast.error('Voiding company records is not available yet.'); },
     voidExpense: () => { toast.error('Voiding company records is not available yet.'); },
-    submitExpense: async ({ documentType: _t, verified: _v, currency: _c, source: _s, ...e }, receipt) => { await mutate('expense', { ...e, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: (receipt as Receipt & { storagePath?: string }).storagePath } : undefined }); },
-    decide: (id, decision, comment) => mutate('decision', { id, decision, comment }),
-    respondToChanges: (id, response, patch) => mutate('respond', { id, response, amount: patch.amount }),
+    submitExpense: async (e, receipt) => { await mutate('expense', { ...e, documentNumber: e.documentNumber ?? null, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: receipt.storagePath } : undefined }); },
+    decide: (id, decision, comment) => mutate('decision', { id, version: expenses.find(e => e.id === id)?.version ?? 1, decision, comment }),
+    respondToChanges: (id, response, patch) => mutate('respond', { id, version: expenses.find(e => e.id === id)?.version ?? 1, verified: patch.verified, response, amount: patch.amount }),
     setReimbursementStatus: (id, status) => mutate('reimbursement', { id, status }),
     upsertBudget: b => mutate('budget', b), upsertEmployee: denied, removeEmployee: denied, upsertDepartment: denied,
     upsertProject: (p, departmentIds) => mutate('project', { id: p.id, project: p, departmentIds }),

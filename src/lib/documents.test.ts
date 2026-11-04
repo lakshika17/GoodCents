@@ -3,7 +3,7 @@ import { canSubmitForApproval, isExpenseEligible } from "./documents";
 import { recommend } from "./calc";
 import type { Expense } from "@/data/types";
 
-const ok = { vendor: "Stockwell Elastomerics", amount: 312.38, date: "2026-10-07", verified: true };
+const ok = { vendor: "Stockwell Elastomerics", amount: 312.38, date: "2026-10-07", verified: true, currency: 'USD', paymentResponsibility: 'employee_paid', paymentEvidenceConfirmed: true };
 
 describe("document eligibility", () => {
   it("only paid receipts and supplier invoices enter the approval queue", () => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, FileText, FileUp, Keyboard, Loader2, MessageCircle, Sparkles } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from '@tanstack/react-query';
 import { readDocument } from "@/data/extraction.functions";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,13 +14,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { DEMO_TODAY } from "@/data/seed";
 import { DOCUMENT_TYPES, canSubmitForApproval, isDocumentType, isExpenseEligible, type DocumentType } from "@/lib/documents";
 import { Field, NotConnected, nativeSelect } from "./shared";
+import { ExtractionAttempt } from '@/lib/extraction-attempt';
+import { calendarDate, moneyInCents } from '@/lib/expense-contract';
 
 const ACCEPT = "image/jpeg,image/png,application/pdf";
-const blank = (departmentId: string) => ({ documentType: "" as DocumentType | "", vendor: "", amount: "", currency: "USD", documentNumber: "", date: "", category: "Office" as Category, departmentId, projectId: "", description: "" });
+const blank = (departmentId: string) => ({ documentType: "" as DocumentType | "", vendor: "", amount: "", currency: "", documentNumber: "", date: "", category: "Office" as Category, departmentId, projectId: "", description: "", paymentResponsibility: 'unknown' as 'unknown' | 'employee_paid' | 'company_paid' | 'unpaid_supplier' });
 
 export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode, authenticatedDevelopment } = useStore();
   const read = useServerFn(readDocument);
+  const queryClient = useQueryClient();
   const aiAvailable = mode === "internal" || authenticatedDevelopment;
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState("");
@@ -29,47 +33,88 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const [pdfFailed, setPdfFailed] = useState(false);
   const [verified, setVerified] = useState(false);
   const [form, setForm] = useState(() => blank(currentUser.departmentId));
+  const [paymentEvidenceConfirmed, setPaymentEvidenceConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const attempts = useRef(new ExtractionAttempt());
+  const submissionKey = useRef<string>(crypto.randomUUID());
+  const uploadDone = useRef(false);
+  const pendingStorageKey = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setForm(blank(currentUser.departmentId)); setSource("manual"); setReadNote(""); }
+    attempts.current.select(); setReading(false);
+    if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setPaymentEvidenceConfirmed(false); setForm(blank(currentUser.departmentId)); setSource("manual"); setReadNote(""); submissionKey.current = crypto.randomUUID(); uploadDone.current = false; }
   }, [open, currentUser.departmentId]);
+  useEffect(() => () => { if (fileUrl) URL.revokeObjectURL(fileUrl); }, [fileUrl]);
+  useEffect(() => {
+    if (!open || mode !== 'internal') return;
+    let active = true;
+    void (async () => {
+      const identity = await supabase.auth.getUser();
+      if (!identity.data.user || !active) return;
+      const key = `receipt-pending-${identity.data.user.id}`;
+      pendingStorageKey.current = key;
+      const saved = sessionStorage.getItem(key);
+      if (!saved) return;
+      try {
+        const pending = JSON.parse(saved) as { key: string; form: typeof form; source: DetailSource; fileName: string; fileType: string };
+        const status = await supabase.rpc('submission_status', { submission_key: pending.key });
+        if (!active) return;
+        if (status.error) { setReadNote('Previous submission status is unavailable. Retry later before uploading another receipt.'); uploadDone.current = true; submissionKey.current = pending.key; return; }
+        if ((status.data as { committed?: boolean } | null)?.committed) {
+          sessionStorage.removeItem(key); toast.success('Previous submission recovered — already saved once.'); await queryClient.invalidateQueries({ queryKey: ['internal'] }); return;
+        }
+        const downloaded = await supabase.storage.from('private-receipts').download(`${identity.data.user.id}/${pending.key}`);
+        if (!active) return;
+        submissionKey.current = pending.key; uploadDone.current = true; setForm(pending.form); setSource(pending.source); setVerified(true); setPaymentEvidenceConfirmed(true);
+        if (downloaded.data) { const restored = new File([downloaded.data], pending.fileName, { type: pending.fileType }); setFile(restored); setFileUrl(URL.createObjectURL(restored)); }
+        setReadNote('Previous submission restored. Retry unchanged, or cancel safely.');
+      } catch { if (active) { uploadDone.current = true; setReadNote('Previous submission needs recovery; do not create another expense.'); } }
+    })();
+    return () => { active = false; };
+  }, [open, mode, queryClient]);
 
   // Never pre-fill fields: automatic document reading is not connected, so every value is entered by a person.
   const onFile = (f: File | undefined) => {
     if (!f) return;
     if (!ACCEPT.split(",").includes(f.type)) { toast.error("Please upload a JPG, PNG, or PDF document"); return; }
-    setFile(f); setPdfFailed(false); setVerified(false);
+    if (submittingRef.current || uploadDone.current) { toast.error('Retry or resolve the current submission before replacing its attachment.'); return; }
+    const attempt = attempts.current.select();
+    setForm(blank(currentUser.departmentId)); setReading(false); setPaymentEvidenceConfirmed(false);
+    setFile(f); setPdfFailed(false); setVerified(false); submissionKey.current = crypto.randomUUID();
     setFileUrl(URL.createObjectURL(f));
     setSource("manual"); setReadNote("");
-    if (aiAvailable) void runRead(f);
+    if (aiAvailable) void runRead(f, attempt);
   };
-  const runRead = async (f: File) => {
+  const runRead = async (f: File, attempt: { selection: number; revision: number }) => {
     if (f.size > 10 * 1024 * 1024) { setReadNote("File is over 10 MB, so it can't be read automatically. Enter details manually."); return; }
     setReading(true);
     try {
       const bytes = new Uint8Array(await f.arrayBuffer());
       let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-      const res = await read({ data: { fileName: f.name, mimeType: f.type as "application/pdf", base64: btoa(bin) } });
+      const res = await Promise.race([read({ data: { fileName: f.name, mimeType: f.type as "application/pdf", base64: btoa(bin) } }), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('deadline')), 30_000))]);
+      if (!attempts.current.current(attempt)) return;
+      if (!attempts.current.canApply(attempt)) { setReadNote('Automatic reading finished after your edits. Your entries were kept; compare them with the document.'); return; }
       if (!res.ok) { setReadNote(res.error); return; }
       const d = res.data;
       setForm((s) => ({ ...s,
         documentType: d.documentType ?? s.documentType, vendor: d.counterparty ?? "", amount: d.amount != null ? String(d.amount) : "",
-        currency: d.currency ?? "USD", date: d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : "", documentNumber: d.documentNumber ?? "",
+        currency: d.currency ?? "", date: d.date && calendarDate(d.date) ? d.date : "", documentNumber: d.documentNumber ?? "",
       }));
       setSource("ai");
       setReadNote(d.notes ? `Read by AI — check every field. ${d.notes}` : "Read by AI — check every field against the document.");
-    } catch { setReadNote("Automatic reading failed. Enter the details manually."); }
-    finally { setReading(false); }
+    } catch { if (attempts.current.current(attempt)) setReadNote("Automatic reading failed or timed out. Enter the details manually."); }
+    finally { if (attempts.current.current(attempt)) setReading(false); }
   };
-  const update = (patch: Partial<typeof form>) => { setForm((s) => ({ ...s, ...patch })); setVerified(false); setSource((x) => (x === "ai" ? "ai_corrected" : x)); };
+  const update = (patch: Partial<typeof form>) => { if (uploadDone.current || submittingRef.current) { toast.error('Retry the unchanged submission first.'); return; } attempts.current.edit(); setForm((s) => ({ ...s, ...patch })); setVerified(false); setSource((x) => (x === "ai" ? "ai_corrected" : x)); };
 
   const projectOptions = projects.filter((p) => projectDepartments.some((pd) => pd.projectId === p.id && pd.departmentId === form.departmentId));
-  const amount = form.amount === "" ? null : parseFloat(form.amount);
+  const amount = form.amount === "" ? null : Number(form.amount);
   const eligible = isExpenseEligible(form.documentType);
-  const complete = !!form.vendor.trim() && amount !== null && amount > 0 && !!form.date;
-  const canSubmit = canSubmitForApproval({ documentType: form.documentType, vendor: form.vendor, amount, date: form.date, verified, currency: form.currency });
+  const complete = !!form.vendor.trim() && amount !== null && moneyInCents(amount) && calendarDate(form.date) && !!form.currency;
+  const canSubmit = canSubmitForApproval({ documentType: form.documentType, vendor: form.vendor, amount, date: form.date, verified, currency: form.currency, paymentResponsibility: form.paymentResponsibility, paymentEvidenceConfirmed }) && !!file && !reading;
   const canSaveDocument = !!form.documentType && !eligible && complete && verified;
   const isPdf = file?.type === "application/pdf";
 
@@ -80,26 +125,57 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   };
 
   const submit = async () => {
-    if (!canSubmit || amount === null || !form.documentType) return;
+    if (submittingRef.current || !canSubmit || amount === null || !form.documentType) return;
+    submittingRef.current = true; setSubmitting(true);
     let storagePath: string | undefined;
+    try {
     if (mode === "internal" && file) {
       if (file.size > 10 * 1024 * 1024) { toast.error("Document must be 10 MB or smaller"); return; }
       const { data } = await supabase.auth.getUser();
       if (!data.user) return;
-      storagePath = `${data.user.id}/${crypto.randomUUID()}`;
-      const uploaded = await supabase.storage.from("private-receipts").upload(storagePath, file);
-      if (uploaded.error) { toast.error(uploaded.error.message); return; }
+      storagePath = `${data.user.id}/${submissionKey.current}`;
+      pendingStorageKey.current = `receipt-pending-${data.user.id}`;
+      sessionStorage.setItem(pendingStorageKey.current, JSON.stringify({ key: submissionKey.current, form, source, fileName: file.name, fileType: file.type }));
+      if (!uploadDone.current) {
+        const uploaded = await supabase.storage.from("private-receipts").upload(storagePath, file);
+        if (uploaded.error && !['409','Duplicate'].includes(String(uploaded.error.statusCode))) throw uploaded.error;
+        uploadDone.current = true;
+      }
     }
     await submitExpense(
-      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, documentType: form.documentType, verified, currency: form.currency, source },
+      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, documentType: form.documentType, documentNumber: form.documentNumber.trim() || null, verified, currency: form.currency, source, submissionKey: submissionKey.current, paymentResponsibility: form.paymentResponsibility, paymentEvidenceConfirmed },
       file ? { fileName: file.name, fileType: file.type, previewUrl: file.type.startsWith("image/") || isPdf ? fileUrl : null, extractionSimulated: false, storagePath } : undefined,
     );
     toast.success(mode === "demo" ? "Expense submitted for approval (demo)" : "Expense submitted for approval");
+    if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current);
+    uploadDone.current = false;
     onOpenChange(false);
+    } catch (error) {
+      if (mode === 'internal' && storagePath) {
+        const status = await supabase.rpc('submission_status', { submission_key: submissionKey.current });
+        const result = status.data as { committed?: boolean } | null;
+        if (!status.error && result?.committed) { if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current); uploadDone.current = false; await queryClient.invalidateQueries({ queryKey: ['internal'] }); toast.success('Submission recovered — saved once.'); onOpenChange(false); return; }
+        // Leave the attachment in place on uncertain outcomes. Explicit cancellation locks the key before any cleanup.
+      }
+      toast.error(error instanceof Error ? error.message : 'Submission could not be confirmed. Retry without changing the document.');
+    } finally { submittingRef.current = false; setSubmitting(false); }
+  };
+  const cancelSubmission = async () => {
+    if (submittingRef.current) return;
+    if (mode === 'internal' && uploadDone.current) {
+      const cancelled = await supabase.rpc('cancel_expense_submission', { submission_key: submissionKey.current });
+      if (cancelled.error || cancelled.data !== true) { toast.error('Submission may already be saved. Its attachment was not deleted.'); return; }
+      const identity = await supabase.auth.getUser();
+      if (!identity.data.user) return;
+      const removed = await supabase.storage.from('private-receipts').remove([`${identity.data.user.id}/${submissionKey.current}`]);
+      if (removed.error) { toast.error('Cancelled safely; attachment cleanup is still pending.'); return; }
+    }
+    if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current);
+    uploadDone.current = false; onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={value => { if (!value && (submittingRef.current || uploadDone.current)) { toast.error('Retry or cancel this submission before closing.'); return; } onOpenChange(value); }}>
       <DialogContent className="max-h-[92vh] overflow-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Upload document</DialogTitle>
@@ -127,7 +203,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
             )}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={() => camRef.current?.click()}><Camera className="h-4 w-4" />Camera</Button>
-              <Button variant="outline" size="sm" onClick={() => { setFile(null); setFileUrl(null); setVerified(false); }}><Keyboard className="h-4 w-4" />Type manually</Button>
+              <Button variant="outline" size="sm" disabled={submitting || uploadDone.current} onClick={() => { attempts.current.select(); setReading(false); setFile(null); setFileUrl(null); setVerified(false); setPaymentEvidenceConfirmed(false); setForm(blank(currentUser.departmentId)); setSource('manual'); setReadNote(''); }}><Keyboard className="h-4 w-4" />Type manually</Button>
             </div>
             {aiAvailable
               ? <p className="rounded-lg border px-3 py-2 text-xs text-muted-foreground">{reading ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Reading document with AI…</span> : readNote || "Uploaded documents are read with AI. You check and correct every field before saving."}</p>
@@ -149,7 +225,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
             )}
             <Field label={eligible || !form.documentType ? "Vendor" : "Company / vendor"}><Input value={form.vendor} onChange={(e) => update({ vendor: e.target.value })} placeholder="As shown on the document" /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Amount"><Input type="number" min="0" step="0.001" value={form.amount} onChange={(e) => update({ amount: e.target.value })} /></Field>
+              <Field label="Amount"><Input type="number" min="0" step="0.01" value={form.amount} onChange={(e) => update({ amount: e.target.value })} /></Field>
               <Field label="Currency"><Input maxLength={3} value={form.currency} onChange={(e) => update({ currency: e.target.value.toUpperCase() })} /></Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -175,16 +251,18 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
               </select>
             </Field>
             <Field label="Note (optional)"><Input value={form.description} onChange={(e) => update({ description: e.target.value })} /></Field>
+            {eligible && <><Field label="Payment responsibility"><select aria-label="Payment responsibility" className={nativeSelect} value={form.paymentResponsibility} onChange={e => update({ paymentResponsibility: e.target.value as typeof form.paymentResponsibility })}><option value="unknown">Unknown — needs clarification</option><option value="employee_paid">I personally paid</option><option value="company_paid">Company already paid</option><option value="unpaid_supplier">Supplier is not paid</option></select></Field><label className="flex items-start gap-2 text-sm"><Checkbox aria-label="Payment evidence confirmed" checked={paymentEvidenceConfirmed} disabled={submitting || uploadDone.current} onCheckedChange={v => { setPaymentEvidenceConfirmed(v === true); setVerified(false); }} />The attached document includes evidence of my personal payment.</label></>}
             <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
               <Checkbox checked={verified} disabled={!complete || !form.documentType || reading} onCheckedChange={(v) => setVerified(v === true)} aria-label="I verified these details" />
               <span>I checked the type, vendor, amount and date against the document.{(!complete || !form.documentType) && <span className="block text-xs text-muted-foreground">Fill in the type, vendor, amount and date first.</span>}</span>
             </label>
             <div className="mt-1 grid gap-2 sm:grid-cols-2">
-              <Button variant="outline" disabled={!form.documentType} onClick={() => record("draft")}>Save as draft</Button>
+              <Button variant="outline" disabled={!form.documentType || submitting || uploadDone.current} onClick={() => record("draft")}>Save as draft</Button>
               {eligible || !form.documentType
-                ? <Button onClick={submit} disabled={!canSubmit}>Submit for approval</Button>
+                ? <Button onClick={() => void submit()} disabled={!canSubmit || submitting}>{submitting ? 'Submitting…' : 'Submit for approval'}</Button>
                 : <Button onClick={() => record("saved")} disabled={!canSaveDocument}>Save {form.documentType}</Button>}
             </div>
+            {uploadDone.current && <Button variant="outline" disabled={submitting} onClick={() => void cancelSubmission()}>Cancel submission safely</Button>}
           </div>
         </div>
       </DialogContent>
