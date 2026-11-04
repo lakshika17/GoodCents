@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, FileText, FileUp, Keyboard, Loader2, MessageCircle, Sparkles } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from '@tanstack/react-query';
 import { readDocument } from "@/data/extraction.functions";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +23,7 @@ const blank = (departmentId: string) => ({ documentType: "" as DocumentType | ""
 export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode, authenticatedDevelopment } = useStore();
   const read = useServerFn(readDocument);
+  const queryClient = useQueryClient();
   const aiAvailable = mode === "internal" || authenticatedDevelopment;
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState("");
@@ -37,6 +39,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const attempts = useRef(new ExtractionAttempt());
   const submissionKey = useRef(crypto.randomUUID());
   const uploadDone = useRef(false);
+  const pendingStorageKey = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
 
@@ -45,6 +48,33 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
     if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setPaymentEvidenceConfirmed(false); setForm(blank(currentUser.departmentId)); setSource("manual"); setReadNote(""); submissionKey.current = crypto.randomUUID(); uploadDone.current = false; }
   }, [open, currentUser.departmentId]);
   useEffect(() => () => { if (fileUrl) URL.revokeObjectURL(fileUrl); }, [fileUrl]);
+  useEffect(() => {
+    if (!open || mode !== 'internal') return;
+    let active = true;
+    void (async () => {
+      const identity = await supabase.auth.getUser();
+      if (!identity.data.user || !active) return;
+      const key = `receipt-pending-${identity.data.user.id}`;
+      pendingStorageKey.current = key;
+      const saved = sessionStorage.getItem(key);
+      if (!saved) return;
+      try {
+        const pending = JSON.parse(saved) as { key: string; form: typeof form; source: DetailSource; fileName: string; fileType: string };
+        const status = await supabase.rpc('submission_status', { submission_key: pending.key });
+        if (!active) return;
+        if (status.error) { setReadNote('Previous submission status is unavailable. Retry later before uploading another receipt.'); uploadDone.current = true; submissionKey.current = pending.key; return; }
+        if ((status.data as { committed?: boolean } | null)?.committed) {
+          sessionStorage.removeItem(key); toast.success('Previous submission recovered — already saved once.'); await queryClient.invalidateQueries({ queryKey: ['internal'] }); return;
+        }
+        const downloaded = await supabase.storage.from('private-receipts').download(`${identity.data.user.id}/${pending.key}`);
+        if (!active) return;
+        submissionKey.current = pending.key; uploadDone.current = true; setForm(pending.form); setSource(pending.source); setVerified(true); setPaymentEvidenceConfirmed(true);
+        if (downloaded.data) { const restored = new File([downloaded.data], pending.fileName, { type: pending.fileType }); setFile(restored); setFileUrl(URL.createObjectURL(restored)); }
+        setReadNote('Previous submission restored. Retry unchanged, or cancel safely.');
+      } catch { if (active) { uploadDone.current = true; setReadNote('Previous submission needs recovery; do not create another expense.'); } }
+    })();
+    return () => { active = false; };
+  }, [open, mode, queryClient]);
 
   // Never pre-fill fields: automatic document reading is not connected, so every value is entered by a person.
   const onFile = (f: File | undefined) => {
@@ -104,6 +134,8 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
       const { data } = await supabase.auth.getUser();
       if (!data.user) return;
       storagePath = `${data.user.id}/${submissionKey.current}`;
+      pendingStorageKey.current = `receipt-pending-${data.user.id}`;
+      sessionStorage.setItem(pendingStorageKey.current, JSON.stringify({ key: submissionKey.current, form, source, fileName: file.name, fileType: file.type }));
       if (!uploadDone.current) {
         const uploaded = await supabase.storage.from("private-receipts").upload(storagePath, file);
         if (uploaded.error && !['409','Duplicate'].includes(String(uploaded.error.statusCode))) throw uploaded.error;
@@ -115,12 +147,14 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
       file ? { fileName: file.name, fileType: file.type, previewUrl: file.type.startsWith("image/") || isPdf ? fileUrl : null, extractionSimulated: false, storagePath } : undefined,
     );
     toast.success(mode === "demo" ? "Expense submitted for approval (demo)" : "Expense submitted for approval");
+    if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current);
+    uploadDone.current = false;
     onOpenChange(false);
     } catch (error) {
       if (mode === 'internal' && storagePath) {
         const status = await supabase.rpc('submission_status', { submission_key: submissionKey.current });
         const result = status.data as { committed?: boolean } | null;
-        if (!status.error && result?.committed) { toast.success('Submission recovered — saved once.'); onOpenChange(false); return; }
+        if (!status.error && result?.committed) { if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current); uploadDone.current = false; await queryClient.invalidateQueries({ queryKey: ['internal'] }); toast.success('Submission recovered — saved once.'); onOpenChange(false); return; }
         // Leave the attachment in place on uncertain outcomes. Explicit cancellation locks the key before any cleanup.
       }
       toast.error(error instanceof Error ? error.message : 'Submission could not be confirmed. Retry without changing the document.');
@@ -136,6 +170,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
       const removed = await supabase.storage.from('private-receipts').remove([`${identity.data.user.id}/${submissionKey.current}`]);
       if (removed.error) { toast.error('Cancelled safely; attachment cleanup is still pending.'); return; }
     }
+    if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current);
     uploadDone.current = false; onOpenChange(false);
   };
 

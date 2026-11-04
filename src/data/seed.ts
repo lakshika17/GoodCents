@@ -88,6 +88,7 @@ function buildExpenses(): { expenses: Expense[]; receipts: Receipt[] } {
           id, employeeId: empId, vendor: vendors[Math.floor(r() * vendors.length)] ?? vendors[0] ?? 'Sample vendor', amount, date: `${month}-${day}`,
           category: cat, departmentId: b.departmentId, projectId: b.projectId, description: `${cat} purchase`,
           receiptId: hasReceipt ? `r-${id}` : null, approvalStatus: status, submittedAt: `${month}-${day}`,
+          verified: true, // Explicitly confirmed fictional fixture; never applied to company records.
         });
       }
     }
