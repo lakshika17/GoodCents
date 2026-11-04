@@ -229,6 +229,7 @@ function InternalProvider({ children }: { children: ReactNode }) {
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
+export function useOptionalStore() { return useContext(Ctx); }
 export function useStore() {
   const v = useContext(Ctx);
   if (!v) throw new Error("useStore outside StoreProvider");
