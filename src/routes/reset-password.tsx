@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/shared';
 import { pageHead } from '@/lib/meta';
-export const Route = createFileRoute('/reset-password')({ head: pageHead('Set Password','Set or recover your invited Quantera employee password.'), component: ResetPassword });
+export const Route = createFileRoute('/reset-password')({ head: pageHead('Set Password','Set or recover your GoodCents password.'), component: ResetPassword });
 function ResetPassword() {
   const [valid, setValid] = useState(false); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const navigate = useNavigate();
   useEffect(() => { const hash = new URLSearchParams(window.location.hash.slice(1)); const type = hash.get('type'); setValid(type === 'recovery' || type === 'invite'); }, []);

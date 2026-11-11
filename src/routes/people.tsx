@@ -23,7 +23,7 @@ function People() {
   if (role !== "admin") return <Panel><p className="py-10 text-center text-sm text-muted-foreground">Switch to the Finance role to manage people and departments.</p></Panel>;
   return (
     <>
-      <PageHeader title="Employees & Departments" badge={<DemoBadge>Quantera team · Sample finances</DemoBadge>} />
+      <PageHeader title="Employees & Departments" badge={<DemoBadge>Sample team · Sample finances</DemoBadge>} />
       <Tabs defaultValue="employees">
         <TabsList><TabsTrigger value="employees">Employees</TabsTrigger><TabsTrigger value="departments">Departments</TabsTrigger><TabsTrigger value="projects">Projects</TabsTrigger></TabsList>
         <TabsContent value="employees"><EmployeesTab /></TabsContent>

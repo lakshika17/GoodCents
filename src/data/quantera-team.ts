@@ -10,9 +10,9 @@ export const quanteraDepartments: Department[] = [
 
 // Workbook directory only. These display records never authenticate a user.
 export const quanteraEmployees: Employee[] = [
-  { id: 'EMP-001', name: 'Terry Bates, PhD', title: 'Founder and CEO', email: 'terry.bates@quantera.as', departmentId: 'DEP-001', role: 'admin', managerId: null },
-  { id: 'EMP-002', name: 'Terry Bates, Sr.', title: 'Director of QMS and Compliance', email: 'terry.bates.sr@quantera.as', departmentId: 'DEP-002', role: 'manager', managerId: 'EMP-001' },
-  { id: 'EMP-003', name: 'Alexis Grace', title: 'Operations Coordinator', email: 'alexis.grace@quantera.as', departmentId: 'DEP-003', role: 'manager', managerId: 'EMP-001' },
-  { id: 'EMP-004', name: 'Matt Scimeca', title: 'CTO', email: 'matthew.scimeca@quantera.as', departmentId: 'DEP-004', role: 'manager', managerId: 'EMP-001' },
-  { id: 'EMP-005', name: 'Lakshika Sarupria', title: 'AI Product Manager', email: 'lakshika.sarupria@quantera.as', departmentId: 'DEP-005', role: 'manager', managerId: 'EMP-001' },
+  { id: 'EMP-001', name: 'Avery Chen', title: 'Founder and CEO', email: 'avery.chen@goodcents.example', departmentId: 'DEP-001', role: 'admin', managerId: null },
+  { id: 'EMP-002', name: 'Jordan Patel', title: 'Compliance Director', email: 'jordan.patel@goodcents.example', departmentId: 'DEP-002', role: 'manager', managerId: 'EMP-001' },
+  { id: 'EMP-003', name: 'Sam Rivera', title: 'Operations Coordinator', email: 'sam.rivera@goodcents.example', departmentId: 'DEP-003', role: 'manager', managerId: 'EMP-001' },
+  { id: 'EMP-004', name: 'Morgan Lee', title: 'CTO', email: 'morgan.lee@goodcents.example', departmentId: 'DEP-004', role: 'manager', managerId: 'EMP-001' },
+  { id: 'EMP-005', name: 'Riley Kim', title: 'Product Manager', email: 'riley.kim@goodcents.example', departmentId: 'DEP-005', role: 'manager', managerId: 'EMP-001' },
 ];

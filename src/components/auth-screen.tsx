@@ -29,8 +29,8 @@ export function AuthScreen() {
   };
   return <main className="grid min-h-screen place-items-center bg-background px-4">
     <div className="w-full max-w-sm space-y-6">
-      <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground"><Sparkles className="h-5 w-5" /></div><div><h1 className="font-display text-2xl font-semibold">AI CFO</h1><p className="text-sm text-muted-foreground">Quantera Analytical</p></div></div>
-      <div><h2 className="flex items-center gap-2 text-lg font-semibold"><LockKeyhole className="h-4 w-4" />Employee sign in</h2><p className="mt-1 text-sm text-muted-foreground">Invited Quantera employees only.</p></div>
+      <div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground"><Sparkles className="h-5 w-5" /></div><div><h1 className="font-display text-2xl font-semibold">AI CFO</h1></div></div>
+      <div><h2 className="flex items-center gap-2 text-lg font-semibold"><LockKeyhole className="h-4 w-4" />Employee sign in</h2><p className="mt-1 text-sm text-muted-foreground">Sign in to GoodCents.</p></div>
       <form className="grid gap-4" onSubmit={event => { event.preventDefault(); void signIn(); }}>
         <Field label="Work email"><Input type="email" autoComplete="username" required maxLength={255} value={email} onChange={e => setEmail(e.target.value)} /></Field>
         <Field label="Password"><Input type="password" autoComplete="current-password" required maxLength={200} value={password} onChange={e => setPassword(e.target.value)} /></Field>

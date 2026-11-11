@@ -19,7 +19,7 @@ export function vaultSummary(s: VaultSettings, payments: VaultPayment[], reserve
 /** Every reason a payment release must be blocked. Empty means it may be released by an authorized person. */
 export function releaseBlockers(o: { settings: VaultSettings; payments: VaultPayment[]; amount: number; refId: string; today: string; payeeId: string; authorizerId: string; canAuthorize: boolean; approverId?: string | null }): string[] {
   const r: string[] = [];
-  if (!o.canAuthorize) r.push("Only Terry or an authorized finance administrator can release payments.");
+  if (!o.canAuthorize) r.push("Only the founder or an authorized finance administrator can release payments.");
   if (o.payeeId === o.authorizerId) r.push("You cannot authorize a payment to yourself.");
   if (o.approverId && o.approverId === o.authorizerId) r.push("The manager who approved this cannot also authorize its payment.");
   if (o.settings.frozen) r.push("New payments are frozen.");
@@ -31,7 +31,7 @@ export function releaseBlockers(o: { settings: VaultSettings; payments: VaultPay
   return r;
 }
 
-/** Unusual-activity alerts shown to Terry and finance. */
+/** Unusual-activity alerts shown to the founder and finance. */
 export function securityAlerts(s: VaultSettings, payments: VaultPayment[]): string[] {
   const a: string[] = [];
   const done = payments.filter((p) => p.status === "completed");

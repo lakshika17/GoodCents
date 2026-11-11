@@ -126,7 +126,7 @@ export const reimbursements: Reimbursement[] = expenses
   });
 
 export const notifications: AppNotification[] = [
-  { id: "n1", type: "approval_requested", message: "Lakshika Sarupria submitted a sample expense for your approval", date: "2026-11-02", read: false, audience: ["manager", "admin"] },
+  { id: "n1", type: "approval_requested", message: "Riley Kim submitted a sample expense for your approval", date: "2026-11-02", read: false, audience: ["manager", "admin"] },
   { id: "n2", type: "budget_threshold", message: "Atlas Assay budget passed 80% utilization", date: "2026-11-01", read: false, audience: ["manager", "admin"] },
   { id: "n3", type: "missing_info", message: "A recent sample expense is missing a receipt", date: "2026-11-02", read: false, audience: ["employee"], employeeId: "EMP-005" },
   { id: "n4", type: "payment_failed", message: "A demo reimbursement is marked failed — review details", date: "2026-10-28", read: false, audience: ["admin"] },
