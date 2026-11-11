@@ -94,7 +94,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const path = useRouterState({ select: s => s.location.pathname });
+  const path = useRouterState({ select: s => (s.resolvedLocation ?? s.location).pathname });
   const publicScreen = isPublicPath(path);
   return (
     <QueryClientProvider client={queryClient}>

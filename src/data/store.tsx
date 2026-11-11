@@ -154,7 +154,7 @@ function DemoProvider({ children, authenticated = false }: { children: ReactNode
   return <Ctx.Provider value={{ ...v, authenticatedDevelopment: authenticated }}>{children}</Ctx.Provider>;
 }
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const path = useRouterState({ select: s => s.location.pathname });
+  const path = useRouterState({ select: s => (s.resolvedLocation ?? s.location).pathname });
   const [ready, setReady] = useState(false);
   const [demo, setDemo] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
