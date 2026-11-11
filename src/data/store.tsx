@@ -204,7 +204,7 @@ function InternalProvider({ children }: { children: ReactNode }) {
     try { const validated = actionSchema.parse({ action, payload }); await perform({ data: validated }); await qc.invalidateQueries({ queryKey: ['internal'] }); }
     catch (error) { toast.error(error instanceof Error ? error.message : 'Action failed'); throw error; }
   };
-  const denied = () => { toast.error('Workbook employee and department records are managed by Terry through invitations.'); };
+  const denied = () => { toast.error('Workbook employee and department records are managed by the founder through invitations.'); };
   const expenses = dataRows<Expense>('expenses');
   const notifications = dataRows<AppNotification>('notifications');
   const value: Store = {

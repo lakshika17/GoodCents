@@ -31,7 +31,7 @@ function Vault() {
 function VaultBody() {
   const { role, canAuthorize, currentUser, reimbursements, employees, setReimbursementStatus } = useStore();
   const v = useVault();
-  const controller = role === "admin" || canAuthorize; // Terry (Founder) or an authorized finance administrator
+  const controller = role === "admin" || canAuthorize; // Founder or an authorized finance administrator
   const name = (id: string) => employees.find((e) => e.id === id)?.name ?? id;
   const open = reimbursements.filter((r) => ["awaiting_authorization", "queued", "processing"].includes(r.status));
   const approvedVendor = v.requests.filter((r) => r.status === "manager_approved");
@@ -63,7 +63,7 @@ function VaultBody() {
         <Kpi label="Per-transaction limit" value={money(v.settings.perTransactionLimit)} />
       </div>
 
-      {controller ? <Controls /> : <Panel title="Vault controls"><p className="flex items-center gap-2 text-sm text-muted-foreground"><Lock className="h-4 w-4" />Only Terry or an authorized finance administrator can change limits, freeze payments or release funds.</p></Panel>}
+      {controller ? <Controls /> : <Panel title="Vault controls"><p className="flex items-center gap-2 text-sm text-muted-foreground"><Lock className="h-4 w-4" />Only the founder or an authorized finance administrator can change limits, freeze payments or release funds.</p></Panel>}
 
       <VendorRequests />
 
@@ -114,7 +114,7 @@ function Controls() {
   };
   const toggle = () => { const frozen = !v.settings.frozen; updateVault((s) => ({ ...s, settings: { ...s.settings, frozen } }), currentUser.name, frozen ? "Froze new payments" : "Unfroze payments"); toast.success(frozen ? "New payments frozen" : "Payments unfrozen"); };
   return (
-    <Panel title="Terry's controls" action={<Button size="sm" variant={v.settings.frozen ? "default" : "outline"} className={v.settings.frozen ? "" : "text-destructive"} onClick={toggle}><Snowflake className="h-4 w-4" />{v.settings.frozen ? "Unfreeze payments" : "Emergency freeze"}</Button>}>
+    <Panel title="Founder controls" action={<Button size="sm" variant={v.settings.frozen ? "default" : "outline"} className={v.settings.frozen ? "" : "text-destructive"} onClick={toggle}><Snowflake className="h-4 w-4" />{v.settings.frozen ? "Unfreeze payments" : "Emergency freeze"}</Button>}>
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
         <Field label="Spending allowance (USD)"><Input type="number" min="0" value={f.allowance} onChange={(e) => setF({ ...f, allowance: e.target.value })} /></Field>
         <Field label="Daily limit (USD)"><Input type="number" min="0" value={f.dailyLimit} onChange={(e) => setF({ ...f, dailyLimit: e.target.value })} /></Field>

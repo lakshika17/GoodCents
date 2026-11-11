@@ -5,7 +5,7 @@ export const DEMO_PREVIEWS = {
   employee: { label: 'Employee', role: 'employee', employeeId: 'EMP-005', canAuthorize: false },
   manager: { label: 'Manager', role: 'manager', employeeId: 'EMP-005', canAuthorize: false },
   finance: { label: 'Finance', role: 'admin', employeeId: 'EMP-003', canAuthorize: true },
-  terry: { label: 'Terry', role: 'admin', employeeId: 'EMP-001', canAuthorize: false },
+  terry: { label: 'Founder', role: 'admin', employeeId: 'EMP-001', canAuthorize: false },
 } satisfies Record<string, { label: string; role: Role; employeeId: string; canAuthorize: boolean }>;
 
 export type DemoPreview = keyof typeof DEMO_PREVIEWS;

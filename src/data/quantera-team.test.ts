@@ -5,11 +5,11 @@ import { summarize } from '@/lib/calc';
 
 describe('Workbook team consistency', () => {
   const expected = [
-    ['EMP-001', 'Terry Bates, PhD', 'Founder and CEO', 'DEP-001', null],
-    ['EMP-002', 'Terry Bates, Sr.', 'Director of QMS and Compliance', 'DEP-002', 'EMP-001'],
-    ['EMP-003', 'Alexis Grace', 'Operations Coordinator', 'DEP-003', 'EMP-001'],
-    ['EMP-004', 'Matt Scimeca', 'CTO', 'DEP-004', 'EMP-001'],
-    ['EMP-005', 'Lakshika Sarupria', 'AI Product Manager', 'DEP-005', 'EMP-001'],
+    ['EMP-001', 'Avery Chen', 'Founder and CEO', 'DEP-001', null],
+    ['EMP-002', 'Jordan Patel', 'Compliance Director', 'DEP-002', 'EMP-001'],
+    ['EMP-003', 'Sam Rivera', 'Operations Coordinator', 'DEP-003', 'EMP-001'],
+    ['EMP-004', 'Morgan Lee', 'CTO', 'DEP-004', 'EMP-001'],
+    ['EMP-005', 'Riley Kim', 'Product Manager', 'DEP-005', 'EMP-001'],
   ];
   it.each(expected)('preserves workbook employee %s', (id, name, title, departmentId, managerId) => {
     expect(quanteraEmployees.find(e => e.id === id)).toMatchObject({ name, title, departmentId, managerId });
