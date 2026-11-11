@@ -14,7 +14,7 @@ export const extractionSchema = z.object({
 });
 export type Extraction = z.infer<typeof extractionSchema>;
 
-const PROMPT = `Read this financial document for Quantera Analytical and report only what is printed on it.
+const PROMPT = `Read this financial document for GoodCents and report only what is printed on it.
 - documentType: one of ${DOCUMENT_TYPES.join(", ")}. A "Quote"/"Quotation" is a Vendor Quote. Use null if unclear.
 - counterparty: the vendor (or customer, for customer documents) company name exactly as printed.
 - amount: the document's grand total as a number (no currency symbols). Keep the precision shown.

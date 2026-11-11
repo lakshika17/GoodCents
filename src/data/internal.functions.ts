@@ -18,7 +18,7 @@ export const loadInternal = createServerFn({ method: 'GET' }).middleware([requir
   const db = context.supabase;
   const { data: profile, error } = await db.from('profiles').select('*').eq('id', context.userId).single();
   const { data: employeeId } = await db.rpc('current_employee');
-  if (error || !profile || !employeeId) throw new Error('Your account is not an active invited Quantera employee.');
+  if (error || !profile || !employeeId) throw new Error('Your account is not an active invited GoodCents user.');
   const tables = ['departments','employees','projects','project_departments','budgets','expenses','receipts','approvals','reimbursements','notifications','approval_policies','user_roles','access_requests','access_grants','audit_log'] as const;
   const results = await Promise.all(tables.map(async table => {
     const rows: Json[] = [];
@@ -56,7 +56,7 @@ export const requestAccess = createServerFn({ method: 'POST' }).middleware([requ
 
 export const inviteEmployee = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth]).inputValidator(input => z.object({ employeeId: id, origin: z.string().url() }).parse(input)).handler(async ({ data, context }) => {
   const { data: founder } = await context.supabase.rpc('has_role', { _user_id: context.userId, _role: 'founder' });
-  if (!founder) throw new Error('Only Terry can invite employees.');
+  if (!founder) throw new Error('Only the founder can invite employees.');
   const { data: employee } = await context.supabase.from('employees').select('email,active').eq('id', data.employeeId).single();
   if (!employee?.active) throw new Error('Active workbook employee required.');
   const { getRequest } = await import('@tanstack/react-start/server');
