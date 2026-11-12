@@ -42,3 +42,42 @@ The included `.env` holds only public (publishable) backend keys. Server secrets
 Lakshika (Founder), Kulvardhan, Zichen, Lokesh.
 
 Built with [Lovable](https://lovable.dev).
+
+## Judge's Demo Guide
+
+### Access and roles
+- Open https://goodcents.lovable.app/demo (no login), or sign in with Google — accounts without an invitation see the same sample workspace.
+- Switch roles with the **Sample data preview** selector in the top bar: Developer / Admin, Employee, Manager, Finance, Founder. Only Developer / Admin and Finance can authorize payments.
+
+### Walkthrough
+1. **Upload** — submit an expense and attach a JPG, PNG or PDF (or use the camera on mobile).
+2. **AI extraction** — the file is read automatically; fields the AI can't read stay blank. Reading can take up to ~30 seconds; if it fails, enter details manually.
+3. **Review** — check every field against the document. Set the document type to **Paid Receipt** or **Supplier Invoice**, currency **USD**, and tick both confirmation boxes.
+4. **Submit** — "Submit for approval" stays disabled until a document is attached and all of the above are complete ("Save as draft" works anytime).
+5. **Manager approval** — on **Approvals**, approve the expense. Its reimbursement becomes "Awaiting authorization" (approved is not paid).
+6. **Finance payment** — as Finance, open **Reimbursements** and click **Authorize**. This sends a PayPal Sandbox payout.
+
+### Limits and requirements
+- Files: JPG, PNG or PDF, up to 10 MB.
+- Currency: USD only for submission and payouts.
+- Demo payouts: maximum **$1,000.00** each; larger amounts are rejected before contacting PayPal.
+- Quotes, orders, customer documents and drafts are stored but never count toward spending.
+
+### Expected results and data reset
+- After approval, totals and budgets update once; after authorization, a sandbox payout appears in the receiving PayPal Sandbox Personal account (Activity).
+- Demo data lives in browser memory only. Reloading or leaving the demo resets it to the sample data; the selected role is kept for the browser tab. Demo actions never touch company records.
+
+### What is real vs. sample
+| Feature | Source |
+| --- | --- |
+| Team, expenses, budgets, dashboard, scenarios | Sample (fictional) data |
+| Receipt reading | Real AI — DeepSeek via OpenRouter, Lovable AI fallback |
+| Finance "Authorize" payout | Real PayPal **Sandbox** (test money, fixed demo receiver) |
+| Secure Spend Vault | Simulation, labeled DEMO ONLY |
+
+### Troubleshooting
+- **Submit button disabled** — attach a file, choose Paid Receipt/Supplier Invoice, use USD, fill vendor/amount/date, tick both boxes.
+- **AI fields blank or "reading failed"** — type the values manually; the file may be unclear, over 10 MB, or the AI timed out.
+- **Payout error "less than or equal to 100000"** — the amount exceeds the $1,000 demo cap.
+- **Approved but not in PayPal** — approval alone doesn't pay; authorize it on Reimbursements as Finance.
+- **Blank page or stale data** — reload `/demo`.
