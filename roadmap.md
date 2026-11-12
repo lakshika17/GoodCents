@@ -11,3 +11,8 @@
 - [x] English report: .lovable/payment-module-report.md + Files copy
 
 Open (blocked on platform, not code): hosted HTTPS preview UI acceptance — manual steps in report.
+
+## Public demo AI reading
+- [x] Add isolated upload-only reading and preserve internal authorization.
+- [x] Verify signed-out PNG upload: Sample Stationery Shop, USD 19.87, TEST-101, 2026-11-12; all 82 regression tests pass. PDF/JPEG types validated; live PDF/JPEG reading not separately exercised.
+- [x] Explain separate OpenRouter credits and public-demo privacy/cost limitations; OpenRouter not connected and no server-enforced public request limit claimed.

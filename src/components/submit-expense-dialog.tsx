@@ -3,6 +3,8 @@ import { Camera, FileText, FileUp, Keyboard, Loader2, MessageCircle, Sparkles } 
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from '@tanstack/react-query';
 import { getExtractionStatus, readDocument, startExtraction } from "@/data/extraction.functions";
+import { readDemoDocument } from '@/data/demo-extraction.functions';
+import { readingAudience } from '@/lib/demo-extraction';
 import { extractionIssues, mapExtractionToFields } from "@/lib/extraction-map";
 import { TERMINAL_EXTRACTION_STATES, type ExtractionEnvelope } from "@/lib/extraction-types";
 import { toast } from "sonner";
@@ -23,12 +25,13 @@ const ACCEPT = "image/jpeg,image/png,application/pdf";
 const blank = (departmentId: string) => ({ documentType: "" as DocumentType | "", vendor: "", amount: "", currency: "", documentNumber: "", date: "", category: "Office" as Category, departmentId, projectId: "", description: "", paymentResponsibility: 'unknown' as 'unknown' | 'employee_paid' | 'company_paid' | 'unpaid_supplier' });
 
 export function SubmitExpenseDialog({ open, onOpenChange, draftKey }: { open: boolean; onOpenChange: (o: boolean) => void; draftKey?: string | undefined }) {
-  const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode, authenticatedDevelopment } = useStore();
+  const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode } = useStore();
   const read = useServerFn(readDocument);
+  const readDemo = useServerFn(readDemoDocument);
   const start = useServerFn(startExtraction);
   const poll = useServerFn(getExtractionStatus);
   const queryClient = useQueryClient();
-  const aiAvailable = mode === "internal" || authenticatedDevelopment;
+  const aiAvailable = true;
   const [reading, setReading] = useState(false);
   const [readNote, setReadNote] = useState("");
   const [source, setSource] = useState<DetailSource>("manual");
@@ -159,7 +162,8 @@ export function SubmitExpenseDialog({ open, onOpenChange, draftKey }: { open: bo
     try {
       const bytes = new Uint8Array(await f.arrayBuffer());
       let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-      const res = await Promise.race([read({ data: { fileName: f.name, mimeType: f.type as "application/pdf", base64: btoa(bin) } }), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('deadline')), 30_000))]);
+      const reader = readingAudience(mode) === 'public-demo' ? readDemo : read;
+      const res = await Promise.race([reader({ data: { fileName: f.name, mimeType: f.type as "application/pdf", base64: btoa(bin) } }), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('deadline')), 30_000))]);
       if (!attempts.current.current(attempt)) return;
       if (!attempts.current.canApply(attempt)) { setReadNote('Automatic reading finished after your edits. Your entries were kept; compare them with the document.'); return; }
       if (!res.ok) { setReadNote(res.error); return; }
@@ -334,6 +338,7 @@ export function SubmitExpenseDialog({ open, onOpenChange, draftKey }: { open: bo
           <div className="grid content-start gap-3">
             <input ref={fileRef} type="file" accept={ACCEPT} className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
             <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+            {mode === 'demo' && <p className="text-xs text-muted-foreground">Use fictional documents only. Uploads are sent to the AI service for reading, not saved to company records.</p>}
             {file && isPdf && fileUrl && !pdfFailed ? (
               <div className="grid gap-2">
                 <object data={fileUrl} type="application/pdf" aria-label={`Preview of ${file.name}`} className="aspect-[3/4] w-full rounded-xl border bg-muted" onError={() => setPdfFailed(true)}>
