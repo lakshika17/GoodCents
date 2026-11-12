@@ -18,8 +18,8 @@ export function buildPayoutPayload(input: { senderBatchId: string; senderItemId:
   return {
     sender_batch_header: {
       sender_batch_id: input.senderBatchId,
-      email_subject: 'Quantera sandbox reimbursement',
-      email_message: 'Fictional sandbox payout from the Quantera isolated test draft.',
+      email_subject: 'GoodCents sandbox reimbursement',
+      email_message: 'Fictional sandbox payout from the GoodCents isolated test draft.',
       note: input.note,
     },
     items: [{ recipient_type: 'EMAIL', amount: { value: centsToValue(input.amountCents), currency: 'USD' }, receiver: input.receiver, sender_item_id: input.senderItemId, note: input.note }],

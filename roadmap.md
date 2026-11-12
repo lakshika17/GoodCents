@@ -1,5 +1,10 @@
 # Payment module milestone (isolated draft) — complete
 
+## GoodCents team cleanup and API costs
+- [x] Replace visible sample identities with Lakshika (Founder), Kulvardhan, Zichen and Lokesh (Employees), preserving company records and internal identifiers; Zichen email left blank.
+- [x] Verify sample references and unchanged totals with 83 tests; public demo desktop/mobile shows four requested identities with no runtime errors.
+- [x] Check recorded AI credit usage (0.24459 credits across two November 12 requests) and verify direct OpenRouter/Gemini free-tier setup guidance; no provider switched.
+
 - [x] Read PayPal Payouts docs (payouts-post, payouts-item-get, authentication)
 - [x] Migration 0010 (+0011 fix): payment_intents, payout_recipients, status widening, finance RPCs, notifications
 - [x] PayPal server module (OAuth, create payout, get item; sandbox-only origin)

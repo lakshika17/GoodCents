@@ -1,4 +1,4 @@
-// Workbook team with sample-only financial fixtures; never actual company purchases.
+// GoodCents sample team with sample-only financial fixtures; never actual company purchases.
 import type {
   AppNotification, ApprovalPolicy, Approval, Budget, Category, Expense,
   Project, ProjectDepartment, Receipt, Reimbursement, ReimbursementStatus,
@@ -25,7 +25,7 @@ export const budgets: Budget[] = [
   { id: "b-rnd", name: "Science & Research General", departmentId: "DEP-004", projectId: null, ownerId: "EMP-004", amount: 24000, period: "H2 2026", history: [{ date: "2026-06-01", note: "Initial allocation", amount: 22000 }, { date: "2026-08-15", note: "Increased for hiring", amount: 24000 }] },
   { id: "b-atlas", name: "Atlas Assay", departmentId: "DEP-004", projectId: "p-atlas", ownerId: "EMP-004", amount: 18000, period: "H2 2026", history: [{ date: "2026-06-01", note: "Initial allocation", amount: 18000 }] },
   { id: "b-ops", name: "Operations General", departmentId: "DEP-003", projectId: "p-core", ownerId: "EMP-003", amount: 16000, period: "H2 2026", history: [{ date: "2026-06-01", note: "Initial allocation", amount: 16000 }] },
-  { id: "b-mkt", name: "Beacon Launch Product", departmentId: "DEP-005", projectId: "p-beacon", ownerId: "EMP-005", amount: 12000, period: "H2 2026", history: [{ date: "2026-06-01", note: "Initial allocation", amount: 14000 }, { date: "2026-09-01", note: "Reduced after event cancelled", amount: 12000 }] },
+  { id: "b-mkt", name: "Beacon Launch Product", departmentId: "DEP-005", projectId: "p-beacon", ownerId: "EMP-002", amount: 12000, period: "H2 2026", history: [{ date: "2026-06-01", note: "Initial allocation", amount: 14000 }, { date: "2026-09-01", note: "Reduced after event cancelled", amount: 12000 }] },
   { id: "b-fin", name: "Quality & Compliance Tools", departmentId: "DEP-002", projectId: null, ownerId: "EMP-002", amount: 6000, period: "H2 2026", history: [{ date: "2026-06-01", note: "Initial allocation", amount: 6000 }] },
 ];
 
@@ -50,8 +50,8 @@ const spendingTracks: { employeeId: string; budget: string; cats: Category[] }[]
   { employeeId: 'EMP-004', budget: 'b-rnd', cats: ['Travel', 'Meals'] },
   { employeeId: 'EMP-003', budget: 'b-ops', cats: ['Services', 'Office', 'Travel'] },
   { employeeId: 'EMP-003', budget: 'b-ops', cats: ['Meals', 'Travel'] },
-  { employeeId: 'EMP-005', budget: 'b-mkt', cats: ['Services', 'Software', 'Meals', 'Travel'] },
-  { employeeId: 'EMP-005', budget: 'b-mkt', cats: ['Travel', 'Meals'] },
+  { employeeId: 'EMP-002', budget: 'b-mkt', cats: ['Services', 'Software', 'Meals', 'Travel'] },
+  { employeeId: 'EMP-002', budget: 'b-mkt', cats: ['Travel', 'Meals'] },
   { employeeId: 'EMP-002', budget: 'b-fin', cats: ['Software'] },
 ];
 const ranges: Record<Category, [number, number]> = {
@@ -126,11 +126,11 @@ export const reimbursements: Reimbursement[] = expenses
   });
 
 export const notifications: AppNotification[] = [
-  { id: "n1", type: "approval_requested", message: "Riley Kim submitted a sample expense for your approval", date: "2026-11-02", read: false, audience: ["manager", "admin"] },
+  { id: "n1", type: "approval_requested", message: "Kulvardhan submitted a sample expense for your approval", date: "2026-11-02", read: false, audience: ["manager", "admin"] },
   { id: "n2", type: "budget_threshold", message: "Atlas Assay budget passed 80% utilization", date: "2026-11-01", read: false, audience: ["manager", "admin"] },
-  { id: "n3", type: "missing_info", message: "A recent sample expense is missing a receipt", date: "2026-11-02", read: false, audience: ["employee"], employeeId: "EMP-005" },
+  { id: "n3", type: "missing_info", message: "A recent sample expense is missing a receipt", date: "2026-11-02", read: false, audience: ["employee"], employeeId: "EMP-002" },
   { id: "n4", type: "payment_failed", message: "A demo reimbursement is marked failed — review details", date: "2026-10-28", read: false, audience: ["admin"] },
-  { id: "n5", type: "expense_approved", message: "Your sample NorthLab Supply Co. expense was approved", date: "2026-10-20", read: true, audience: ["employee"], employeeId: "EMP-005" },
+  { id: "n5", type: "expense_approved", message: "Your sample NorthLab Supply Co. expense was approved", date: "2026-10-20", read: true, audience: ["employee"], employeeId: "EMP-002" },
   { id: "n6", type: "payment_completed", message: "Reimbursement marked paid (demo status)", date: "2026-09-30", read: true, audience: ["employee", "admin"] },
 ];
 

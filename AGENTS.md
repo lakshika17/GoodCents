@@ -16,7 +16,7 @@
 - Financial math lives in pure functions in `src/lib/calc.ts` with tests — dashboard, budgets and scenarios must agree.
 - Approval status and reimbursement status are separate fields; approved never implies paid.
 - Sample-data preview personas are defined in a pure configuration module and only affect the in-memory demo provider; displayed workbook employee identities never assign backend roles or grant access to company records.
-- Workbook directory fixtures live in a shared browser-safe module; sample spending tracks reference its employee and department IDs while preserving deterministic financial values independently of display names.
+- Sample directory fixtures live in the existing browser-safe module; every financial track and preview must reference an existing sample employee, and identity changes preserve RNG order and aggregate financial values — avoids orphaned records without affecting authenticated identities.
 - Development Admin authorization is owner-provisioned separately from employee roles and requires a revalidated, confirmed account; it opens the fictional provider only, never company finance permissions.
 - Uploaded documents are classified by type in `src/lib/documents.ts`; only paid receipts and supplier invoices become expenses, others (quotes, orders, customer documents, drafts) are stored separately and never affect spending — keeps approval queue and totals limited to real spending evidence.
 - Internal document AI reading requires verified employee authorization; public demo reading uses a separate upload-only function with no database or storage access, sharing the server-only extractor — preserves company isolation while returning suggestions requiring verification.

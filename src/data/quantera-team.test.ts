@@ -3,24 +3,30 @@ import { quanteraEmployees, quanteraDepartments } from './quantera-team';
 import { employees, budgets, expenses, approvals, reimbursements, projectDepartments } from './seed';
 import { summarize } from '@/lib/calc';
 
-describe('Workbook team consistency', () => {
+describe('GoodCents sample team consistency', () => {
   const expected = [
-    ['EMP-001', 'Avery Chen', 'Founder and CEO', 'DEP-001', null],
-    ['EMP-002', 'Jordan Patel', 'Compliance Director', 'DEP-002', 'EMP-001'],
-    ['EMP-003', 'Sam Rivera', 'Operations Coordinator', 'DEP-003', 'EMP-001'],
-    ['EMP-004', 'Morgan Lee', 'CTO', 'DEP-004', 'EMP-001'],
-    ['EMP-005', 'Riley Kim', 'Product Manager', 'DEP-005', 'EMP-001'],
+    ['EMP-001', 'Lakshika', 'Founder', 'DEP-001', null],
+    ['EMP-002', 'Kulvardhan', 'Employee', 'DEP-002', 'EMP-001'],
+    ['EMP-003', 'Zichen', 'Employee', 'DEP-003', 'EMP-001'],
+    ['EMP-004', 'Lokesh', 'Employee', 'DEP-004', 'EMP-001'],
   ];
-  it.each(expected)('preserves workbook employee %s', (id, name, title, departmentId, managerId) => {
+  it.each(expected)('uses requested sample identity %s', (id, name, title, departmentId, managerId) => {
     expect(quanteraEmployees.find(e => e.id === id)).toMatchObject({ name, title, departmentId, managerId });
   });
-  it('uses exactly the five workbook employees and departments in sample data', () => {
+  it('uses exactly four sample employees and preserves departments', () => {
     expect(employees).toEqual(quanteraEmployees);
-    expect(employees).toHaveLength(5);
+    expect(employees).toHaveLength(4);
     expect(quanteraDepartments.map(d => [d.id, d.name])).toEqual([
       ['DEP-001', 'Executive Leadership'], ['DEP-002', 'Quality & Compliance'],
       ['DEP-003', 'Operations'], ['DEP-004', 'Science & Research'], ['DEP-005', 'Product & Technology'],
     ]);
+  });
+  it('keeps Lakshika as sample founder without granting employee sample records administrative roles', () => {
+    expect(employees.find(e => e.name === 'Lakshika')?.role).toBe('admin');
+    expect(employees.filter(e => e.name !== 'Lakshika').map(e => e.role)).toEqual(['employee', 'employee', 'employee']);
+  });
+  it('uses only the supplied emails and leaves Zichen email unspecified', () => {
+    expect(employees.map(e => e.email)).toEqual(['lakshika17sarupria@gmail.com', 'kulsr6802@gmail.com', '', 'lokeshmonani112@gmail.com']);
   });
   it('all financial references resolve to workbook identities', () => {
     const employeeIds = new Set(employees.map(e => e.id));
@@ -30,6 +36,7 @@ describe('Workbook team consistency', () => {
     for (const a of approvals) expect(employeeIds.has(a.managerId)).toBe(true);
     for (const r of reimbursements) { expect(employeeIds.has(r.employeeId)).toBe(true); if (r.authorizedBy) expect(employeeIds.has(r.authorizedBy)).toBe(true); }
     for (const pd of projectDepartments) expect(departmentIds.has(pd.departmentId)).toBe(true);
+    for (const d of quanteraDepartments) if (d.managerId) expect(employeeIds.has(d.managerId)).toBe(true);
   });
   it('preserves existing aggregate sample financial values', () => {
     const values = summarize(budgets, expenses, reimbursements);
