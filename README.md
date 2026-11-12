@@ -67,6 +67,14 @@ Built with [Lovable](https://lovable.dev).
 - After approval, totals and budgets update once; after authorization, a sandbox payout appears in the receiving PayPal Sandbox Personal account (Activity).
 - Demo data lives in browser memory only. Reloading or leaving the demo resets it to the sample data; the selected role is kept for the browser tab. Demo actions never touch company records.
 
+### Check the payout in PayPal Sandbox
+After authorizing a payout, sign in at [sandbox.paypal.com](https://www.sandbox.paypal.com) with the demo receiver account (PayPal **Sandbox** test account only — no real money):
+
+- **Email:** `sb-h8y43k53707459@personal.example.com`
+- **Password:** `N<Wk+c2.`
+
+Open **Activity** to see the incoming payout. Please don't change this account's settings or password.
+
 ### What is real vs. sample
 | Feature | Source |
 | --- | --- |
