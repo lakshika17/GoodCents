@@ -24,41 +24,45 @@ const PROMPT = `Read this financial document for GoodCents and report only what 
 - notes: one short sentence about anything uncertain.
 Never guess or invent values; use null for anything not clearly printed.`;
 
+type Provider = { name: string; baseURL: string; key: string; model: string };
+
+function configuredProviders(): Provider[] {
+  const list: Provider[] = [];
+  const gemini = process.env["GEMINI_API_KEY"];
+  if (gemini) list.push({ name: "gemini", baseURL: "https://generativelanguage.googleapis.com/v1beta/openai", key: gemini, model: "gemini-3.8-flash" });
+  const openrouter = process.env["OPENROUTER_API_KEY"];
+  if (openrouter) list.push({ name: "openrouter", baseURL: "https://openrouter.ai/api/v1", key: openrouter, model: "deepseek/deepseek-v4.1-flash-1017" });
+  return list;
+}
+
 export async function extractDocument(input: { fileName: string; mimeType: string; base64: string }, signal?: AbortSignal): Promise<{ ok: true; data: Extraction } | { ok: false; error: string }> {
-  const apiKey = process.env["LOVABLE_API_KEY"];
-  if (!apiKey) return { ok: false, error: "Automatic reading is not configured." };
-  let gatewayRunId: string | undefined;
-  const provider = createOpenAI({
-    baseURL: "https://ai.gateway.lovable.dev/v1",
-    apiKey,
-    headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    fetch: async (url, init) => {
-      const headers = new Headers(init?.headers);
-      if (gatewayRunId) headers.set("X-Lovable-AIG-Run-ID", gatewayRunId);
-      const res = await fetch(url, { ...init, headers });
-      gatewayRunId ??= res.headers.get("X-Lovable-AIG-Run-ID") ?? undefined;
-      return res;
-    },
-  });
+  const providers = configuredProviders();
+  if (providers.length === 0) return { ok: false, error: "Automatic reading is not configured." };
   const file = input.mimeType === "application/pdf"
     ? { type: "file" as const, filename: input.fileName, data: input.base64, mediaType: "application/pdf" }
     : { type: "image" as const, image: new URL(`data:${input.mimeType};base64,${input.base64}`) };
-  try {
-    const result = streamText({
-      model: provider.responses("openai/gpt-6-astra"),
-      output: Output.object({ schema: extractionSchema }),
-      messages: [{ role: "user", content: [{ type: "text", text: PROMPT }, file] }],
-      abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25_000)]) : AbortSignal.timeout(25_000),
-      providerOptions: { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
-    });
-    const data = await result.output;
-    return { ok: true, data };
-  } catch (error) {
-    if (NoObjectGeneratedError.isInstance(error)) return { ok: false, error: "The document could not be read reliably. Please enter the details manually." };
-    const status = (error as { statusCode?: number }).statusCode;
-    console.error("document extraction failed", status, error instanceof Error ? error.message : error);
-    if (status === 402) return { ok: false, error: "AI credits are exhausted. Enter the details manually." };
-    if (status === 429) return { ok: false, error: "Automatic reading is busy. Try again in a minute or enter details manually." };
-    return { ok: false, error: "Automatic reading is unavailable right now. Enter the details manually." };
+  let lastStatus: number | undefined;
+  let unreadable = false;
+  for (const p of providers) {
+    const provider = createOpenAI({ baseURL: p.baseURL, apiKey: p.key, name: p.name });
+    try {
+      const result = streamText({
+        model: provider.chat(p.model),
+        output: Output.object({ schema: extractionSchema }),
+        messages: [{ role: "user", content: [{ type: "text", text: PROMPT }, file] }],
+        abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(25_000)]) : AbortSignal.timeout(25_000),
+      });
+      const data = await result.output;
+      return { ok: true, data };
+    } catch (error) {
+      if (signal?.aborted) break;
+      if (NoObjectGeneratedError.isInstance(error)) { unreadable = true; continue; }
+      lastStatus = (error as { statusCode?: number }).statusCode;
+      console.error(`document extraction failed (${p.name})`, lastStatus, error instanceof Error ? error.message : error);
+    }
   }
+  if (unreadable) return { ok: false, error: "The document could not be read reliably. Please enter the details manually." };
+  if (lastStatus === 402) return { ok: false, error: "AI credits are exhausted. Enter the details manually." };
+  if (lastStatus === 429) return { ok: false, error: "Automatic reading is busy. Try again in a minute or enter details manually." };
+  return { ok: false, error: "Automatic reading is unavailable right now. Enter the details manually." };
 }
