@@ -4,9 +4,9 @@ import type {
   Project, ProjectDepartment, Receipt, Reimbursement, ReimbursementStatus,
 } from "./types";
 
-import { quanteraDepartments, quanteraEmployees } from './quantera-team';
-export const departments = quanteraDepartments;
-export const employees = quanteraEmployees;
+import { goodcentsDepartments, goodcentsEmployees } from './goodcents-team';
+export const departments = goodcentsDepartments;
+export const employees = goodcentsEmployees;
 
 export const projects: Project[] = [
   { id: "p-atlas", name: "Atlas Assay Platform", code: "ATL", status: "active" },

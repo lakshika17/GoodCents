@@ -1,6 +1,6 @@
 import type { Department, Employee } from './types';
 
-export const quanteraDepartments: Department[] = [
+export const goodcentsDepartments: Department[] = [
   { id: 'DEP-001', name: 'Executive Leadership', managerId: 'EMP-001' },
   { id: 'DEP-002', name: 'Quality & Compliance', managerId: 'EMP-002' },
   { id: 'DEP-003', name: 'Operations', managerId: 'EMP-003' },
@@ -9,7 +9,7 @@ export const quanteraDepartments: Department[] = [
 ];
 
 // Sample directory only. These display records never authenticate a user.
-export const quanteraEmployees: Employee[] = [
+export const goodcentsEmployees: Employee[] = [
   { id: 'EMP-001', name: 'Lakshika', title: 'Founder', email: 'lakshika17sarupria@gmail.com', departmentId: 'DEP-001', role: 'admin', managerId: null },
   { id: 'EMP-002', name: 'Kulvardhan', title: 'Employee', email: 'kulsr6802@gmail.com', departmentId: 'DEP-002', role: 'employee', managerId: 'EMP-001' },
   { id: 'EMP-003', name: 'Zichen', title: 'Employee', email: '', departmentId: 'DEP-003', role: 'employee', managerId: 'EMP-001' },

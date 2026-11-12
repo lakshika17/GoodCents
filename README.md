@@ -1,24 +1,44 @@
-# GoodCents : Paypal Hackathon
+# GoodCents — AI CFO for Team Spending (PayPal Hackathon)
 
-Implement exactly the screenshot and nothing else
+GoodCents helps small teams keep spending within budget and get employees repaid quickly. Employees upload receipts, AI reads them, managers approve, and Finance pays reimbursements through **PayPal Payouts (Sandbox)**.
 
-This project was built with [Lovable](https://lovable.dev).
+## Try it
+- **Live demo:** https://goodcents.lovable.app/demo — no login, fictional sample data.
+- **Sign in with Google:** judges can sign in; accounts without an invitation see the sample workspace only.
 
-## Build with Lovable
+## Features
+- **AI receipt reading** — upload a photo/PDF; DeepSeek (via OpenRouter) extracts merchant, date, amount and currency, with Lovable AI as fallback. Users must verify every value before submitting.
+- **Document types** — paid receipts and supplier invoices become expenses; quotes, orders and drafts never count toward spending.
+- **Approval workflow** — employee submits → manager approves → Finance authorizes payment. Approval and payment are separate steps; approved never means paid.
+- **PayPal Sandbox payouts** — authorizing a reimbursement sends a capped sandbox payout.
+- **Budgets, dashboard and scenarios** — one tested calculation module keeps all totals consistent.
+- **Secure Spend Vault (demo)** — spending limits, freeze, duplicate detection and self-approval prevention.
+- **Security** — invite-only company data, server-side roles, row-level security, idempotent submissions, amounts stored in exact cents.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/0f74dc14-d6c8-4284-a4cf-55c82c3fd3e6).
+## Tech stack
+TanStack Start (React 19, Vite 7), Tailwind CSS v4, shadcn/ui, Postgres with row-level security (Lovable Cloud), Drizzle migrations, Vitest, PayPal Payouts REST API, OpenRouter.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+## Project structure
 ```
+src/routes/        Pages (dashboard, approvals, reimbursements, demo, auth…)
+src/lib/calc.ts    Financial math (tested)
+src/lib/vault.ts   Spend Vault rules
+src/lib/documents.ts  Document classification
+src/data/          Data providers and server functions
+drizzle/migrations Database schema and security policies
+```
+
+## Run locally
+```sh
+git clone https://github.com/lakshika17/GoodCents.git
+cd GoodCents
+bun install   # or npm i
+bun run dev
+bun run test
+```
+The included `.env` holds only public (publishable) backend keys. Server secrets — `OPENROUTER_API_KEY`, `PAYPAL_SANDBOX_CLIENT_ID`, `PAYPAL_SANDBOX_CLIENT_SECRET`, `DEMO_PAYPAL_RECEIVER_EMAIL` — are configured as hosting secrets and are never committed.
+
+## Team
+Lakshika (Founder), Kulvardhan, Zichen, Lokesh.
+
+Built with [Lovable](https://lovable.dev).

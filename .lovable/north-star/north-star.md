@@ -2,7 +2,7 @@
 
 # North star
 
-Quantera's spending stays within budget and employees get repaid for what they spend.
+GoodCents teams' spending stays within budget and employees get repaid for what they spend.
 
 ## Metric
 
