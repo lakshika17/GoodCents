@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useStore } from "@/data/store";
+import { useServerFn } from "@tanstack/react-start";
+import { sendDemoSandboxPayout } from "@/data/demo-payments.functions";
 import type { Reimbursement, ReimbursementStatus } from "@/data/types";
 import { money } from "@/lib/calc";
 import { DemoBadge, Kpi, NotConnected, PageHeader, Panel, ReimbursementBadge, nativeSelect, reimbursementLabels } from "@/components/shared";
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/reimbursements")({
 });
 
 function Reimbursements() {
+  const sendDemoPayout = useServerFn(sendDemoSandboxPayout);
   const { reimbursements, expenses, employees, role, currentUser, setReimbursementStatus, canAuthorize, mode, paymentIntents, payoutRecipients, authorizePayment, checkPaymentStatus } = useStore();
   const [filter, setFilter] = useState<"all" | ReimbursementStatus>("all");
   const [confirm, setConfirm] = useState<Reimbursement | null>(null);
@@ -35,7 +38,7 @@ function Reimbursements() {
   return (
     <>
       <PageHeader title={mode === "internal" ? "Approved — awaiting payment" : "PayPal Reimbursement Center"} badge={<DemoBadge />} description={mode === "internal" ? "Approved revisions awaiting explicit Finance authorization. PayPal Sandbox only." : "Approved expenses become reimbursements. Payouts require explicit authorization by Finance."} />
-      <div className="mb-4"><NotConnected>{mode === "internal" ? "PayPal Sandbox only — no real money moves. Each payout requires explicit Finance authorization." : "Payments are disabled. No money is sent."}</NotConnected></div>
+      <div className="mb-4"><NotConnected>{mode === "internal" ? "PayPal Sandbox only — no real money moves. Each payout requires explicit Finance authorization." : "PayPal Sandbox — authorizing sends a test payout (fake money) to the demo sandbox account."}</NotConnected></div>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="Awaiting authorization" value={money(sum("awaiting_authorization"))} />
         <Kpi label="Authorized / processing" value={money(sum("queued") + sum("processing"))} />
@@ -92,7 +95,7 @@ function Reimbursements() {
               ) : (
                 <span>
                   {confirm && `${money(confirm.amount, 2)} to ${employees.find((e) => e.id === confirm.employeeId)?.name}. `}
-                  This is a demo: the status will move to “Queued”. No PayPal payment will be made.
+                  This sends a PayPal Sandbox payout (test money only) to the demo sandbox receiver account.
                 </span>
               )}
             </AlertDialogDescription>
@@ -102,7 +105,7 @@ function Reimbursements() {
             {mode === "internal" ? (
               <AlertDialogAction disabled={busy} onClick={async (ev) => { ev.preventDefault(); if (!confirm) return; setBusy(true); try { await authorizePayment(confirm.id, confirm.sourceRevision ?? confirmExpense?.version ?? 1); setConfirm(null); } finally { setBusy(false); } }}>Authorize and send sandbox payment</AlertDialogAction>
             ) : (
-              <AlertDialogAction onClick={async () => { if (confirm) { await setReimbursementStatus(confirm.id, "queued", `Authorized by ${currentUser.name} (demo)`); toast.success("Queued — no payment sent"); } setConfirm(null); }}>Authorize (sandbox)</AlertDialogAction>
+              <AlertDialogAction disabled={busy} onClick={async (ev) => { ev.preventDefault(); if (!confirm) return; setBusy(true); try { const name = employees.find((e) => e.id === confirm.employeeId)?.name ?? ""; const res = await sendDemoPayout({ data: { reimbursementId: confirm.id, amountCents: Math.round(confirm.amount * 100), employeeName: name } }); if (res.ok) { setReimbursementStatus(confirm.id, "processing", `Authorized by ${currentUser.name}; PayPal Sandbox batch ${res.batchId}`, res.batchId); toast.success(`Sandbox payout sent to ${res.receiver}`); setConfirm(null); } else { setReimbursementStatus(confirm.id, "failed", `PayPal Sandbox rejected: ${res.error}`); toast.error(res.error); setConfirm(null); } } catch (e) { toast.error(e instanceof Error ? e.message : "Payout failed"); } finally { setBusy(false); } }}>Authorize and send sandbox payment</AlertDialogAction>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>

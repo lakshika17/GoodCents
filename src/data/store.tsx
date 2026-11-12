@@ -111,15 +111,15 @@ function useStoreValue() {
     }));
   }, []);
 
-  const setReimbursementStatus = useCallback((id: string, status: ReimbursementStatus, note: string) => {
+  const setReimbursementStatus = useCallback((id: string, status: ReimbursementStatus, note: string, paypalReference?: string) => {
     set((st) => {
       const rb = st.reimbursements.find((r) => r["id"] === id);
       if (!rb) return st;
       let next: State = {
         ...st,
-        reimbursements: st.reimbursements.map((r) => r.id === id ? { ...r, status, authorizedBy: r.authorizedBy ?? (status === "queued" ? currentUser.id : null), history: [...r.history, { date: today(), status, note }] } : r),
+        reimbursements: st.reimbursements.map((r) => r.id === id ? { ...r, status, paypalReference: paypalReference ?? r.paypalReference, authorizedBy: r.authorizedBy ?? (status === "queued" ? currentUser.id : null), history: [...r.history, { date: today(), status, note }] } : r),
       };
-      if (status === "queued") next = notify(next, "reimbursement_initiated", `Reimbursement authorized and queued (demo) — $${rb.amount.toFixed(2)}`, ["employee", "admin"], rb.employeeId);
+      if (status === "queued" || status === "processing") next = notify(next, "reimbursement_initiated", `Reimbursement sent to PayPal Sandbox — $${rb.amount.toFixed(2)}`, ["employee", "admin"], rb.employeeId);
       return next;
     });
   }, [currentUser.id]);
