@@ -39,7 +39,7 @@ bun run test
 The included `.env` holds only public (publishable) backend keys. Server secrets — `OPENROUTER_API_KEY`, `PAYPAL_SANDBOX_CLIENT_ID`, `PAYPAL_SANDBOX_CLIENT_SECRET`, `DEMO_PAYPAL_RECEIVER_EMAIL` — are configured as hosting secrets and are never committed.
 
 ## Team
-Lakshika (Founder), Kulvardhan, Zichen, Lokesh.
+Lakshika (Founder), Kulvardhan, Zichen.
 
 Built with [Lovable](https://lovable.dev).
 
