@@ -28,3 +28,4 @@
 - Extraction job creation and envelope writes are service-only RPCs after employee authorization and owner-scoped byte reads; browser RPCs cannot establish trusted extraction results.
 - Persist a service-only dispatch claim before the first extraction POST; subsequent starts and uncertain outcomes only check the same request UUID, preventing automatic redispatch after reload or concurrency.
 - Uninvited signed-in accounts fall back to the in-memory sample provider; the server's employee check remains the only path to company data — lets judges sign in with Google safely.
+- Demo Finance authorization sends a capped PayPal Sandbox payout to the DEMO_PAYPAL_RECEIVER_EMAIL secret via a public no-database server function — browser never chooses the receiver.
