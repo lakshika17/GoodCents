@@ -1,5 +1,9 @@
 # Payment module milestone (isolated draft) — complete
 
+## Receipt AI provider change
+- [x] Remove Gemini calls; use existing DeepSeek primary and Lovable AI fallback without changing approval or access rules.
+- [x] Verify provider ordering, fallback and cancellation: 89 regression tests passed; both providers read fictional USD 19.87 receipt correctly, and the signed-out demo upload populated its fields. Compilation passed; company records and payment settings untouched.
+
 ## GoodCents team cleanup and API costs
 - [x] Replace visible sample identities with Lakshika (Founder), Kulvardhan, Zichen and Lokesh (Employees), preserving company records and internal identifiers; Zichen email left blank.
 - [x] Verify sample references and unchanged totals with 83 tests; public demo desktop/mobile shows four requested identities with no runtime errors.
