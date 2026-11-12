@@ -27,3 +27,4 @@
 - Persist editable documents separately from submitted expense revisions; immutable revision snapshots and atomic assigned-manager transitions preserve review history without creating payable drafts.
 - Extraction job creation and envelope writes are service-only RPCs after employee authorization and owner-scoped byte reads; browser RPCs cannot establish trusted extraction results.
 - Persist a service-only dispatch claim before the first extraction POST; subsequent starts and uncertain outcomes only check the same request UUID, preventing automatic redispatch after reload or concurrency.
+- Uninvited signed-in accounts fall back to the in-memory sample provider; the server's employee check remains the only path to company data — lets judges sign in with Google safely.

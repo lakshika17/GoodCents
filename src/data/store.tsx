@@ -196,6 +196,8 @@ function InternalProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const query = useQuery({ queryKey: ['internal'], queryFn: () => fetchData(), retry: false });
   if (query.isPending) return <p className="p-6 text-muted-foreground">Loading your authorized records…</p>;
+  // Uninvited sign-ins (e.g. hackathon judges via Google) get the isolated sample-data workspace; the server never returned company records.
+  if (query.error?.message.includes('not an active invited')) return <DemoProvider authenticated>{children}</DemoProvider>;
   if (query.error || !query.data) return <div className="p-6"><p role="alert">{query.error?.message ?? 'Employee access unavailable.'}</p><Button onClick={() => void supabase.auth.signOut()}>Sign out</Button></div>;
   const tables = query.data.tables;
   type Row = Record<string, any>;
