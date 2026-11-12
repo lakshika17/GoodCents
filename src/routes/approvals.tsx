@@ -19,8 +19,8 @@ export const Route = createFileRoute("/approvals")({
 });
 
 function Approvals() {
-  const { role } = useStore();
-  return role === "employee" ? <EmployeeDecisions /> : <ManagerQueue />;
+  const { role, mode } = useStore();
+  return role === "employee" || (mode === "internal" && role !== "manager") ? <EmployeeDecisions /> : <ManagerQueue />;
 }
 
 function ManagerQueue() {
@@ -56,8 +56,9 @@ function QueueItem({ e, active, onClick }: { e: Expense; active: boolean; onClic
 }
 
 function ReviewCard({ e }: { e: Expense }) {
-  const { employees, departments, projects, budgets, expenses, receipts, policy, decide } = useStore();
+  const { employees, departments, projects, budgets, expenses, receipts, policy, decide, approvals } = useStore();
   const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
   const budget = budgetForExpense(e, budgets);
   const available = budget ? budget.amount - budgetSpent(budget, expenses) - (budgetPending(budget, expenses) - e.amount) : 0;
   const dup = findDuplicate(e, expenses, policy.duplicateWindowDays);
@@ -67,7 +68,8 @@ function ReviewCard({ e }: { e: Expense }) {
 
   const act = async (d: "approved" | "rejected" | "changes_requested") => {
     if (d === "changes_requested" && !comment.trim()) { toast.error("Add a comment describing the changes needed"); return; }
-    await decide(e.id, d, comment.trim()); toast.success(`Expense ${d.replace("_", " ")}`);
+    if (busy) return; setBusy(true);
+    try { await decide(e.id, d, comment.trim()); toast.success(`Expense ${d.replace("_", " ")}`); } catch { /* store reports the failure */ } finally { setBusy(false); }
   };
 
   return (
@@ -98,10 +100,12 @@ function ReviewCard({ e }: { e: Expense }) {
             </div>
             <ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground">{rec.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">Submitted revision {e.version ?? 1} · {e.currency ?? 'Unknown currency'} · {e.paymentResponsibility ?? 'Unknown responsibility'}</p>
+          {approvals.filter(a => a.expenseId === e.id).map(a => <p key={a.id} className="mt-2 text-xs text-muted-foreground">Revision {a.version ?? 1}: {a.decision} — {a.comment}</p>)}
           <Textarea className="mt-4" placeholder="Comment (required when requesting changes)" value={comment} onChange={(ev) => setComment(ev.target.value)} />
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button disabled={e.verified !== true} onClick={() => void act("approved")}><Check className="h-4 w-4" />Approve</Button>
-            <Button variant="outline" onClick={() => act("changes_requested")}><MessageSquare className="h-4 w-4" />Request changes</Button>
+            <Button disabled={busy || e.verified !== true} onClick={() => void act("approved")}><Check className="h-4 w-4" />Approve</Button>
+            <Button variant="outline" disabled={busy} onClick={() => void act("changes_requested")}><MessageSquare className="h-4 w-4" />Request changes</Button>
             <Button variant="outline" className="text-destructive" onClick={() => act("rejected")}><X className="h-4 w-4" />Reject</Button>
           </div>
         </div>
@@ -118,15 +122,17 @@ function EmployeeDecisions() {
       <PageHeader title="My approvals" badge={<DemoBadge />} description="See manager decisions and respond to change requests." />
       <div className="grid gap-3">
         {mine.map((e) => {
-          const a = approvals.find((x) => x.expenseId === e.id);
+          const history = approvals.filter((x) => x.expenseId === e.id).sort((a,b) => (b.version ?? 1) - (a.version ?? 1));
+          const a = history[0];
           return (
             <Panel key={e.id} className="p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><p className="font-medium">{e.vendor} · {money(e.amount, 2)}</p><p className="text-xs text-muted-foreground">{e.date} · {e.category}</p></div>
                 <ApprovalBadge s={e.approvalStatus} />
               </div>
+              {e.approvalStatus === "approved" && <p className="mt-2 text-sm text-muted-foreground">Approved — awaiting payment · revision {e.version ?? 1}. Payments disabled.</p>}
               {a && a.comment && <p className="mt-2 rounded-md bg-muted px-3 py-2 text-sm"><span className="font-medium">Manager:</span> {a.comment}</p>}
-              {e.approvalStatus === "changes_requested" && <ChangeResponse e={e} onSend={async (msg, amount) => { await respondToChanges(e.id, msg, { amount, verified: true }); toast.success("Resubmitted for approval"); }} />}
+              {e.approvalStatus === "changes_requested" && <ChangeResponse e={e} onSend={async (msg, patch) => { await respondToChanges(e.id, msg, { ...patch, verified: true }); toast.success("Resubmitted for approval"); }} />}
             </Panel>
           );
         })}
@@ -135,16 +141,26 @@ function EmployeeDecisions() {
   );
 }
 
-function ChangeResponse({ e, onSend }: { e: Expense; onSend: (msg: string, amount: number) => void }) {
+function ChangeResponse({ e, onSend }: { e: Expense; onSend: (msg: string, patch: Partial<Expense>) => Promise<void> }) {
   const [msg, setMsg] = useState("");
   const [amount, setAmount] = useState(String(e.amount));
+  const [vendor, setVendor] = useState(e.vendor);
+  const [date, setDate] = useState(e.date);
+  const [documentNumber, setDocumentNumber] = useState(e.documentNumber ?? '');
+  const [description, setDescription] = useState(e.description);
   const [confirmed, setConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const change = (set: (v: string) => void, v: string) => { set(v); setConfirmed(false); };
   return (
-    <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_140px_auto]">
-      <Input placeholder="Your response" value={msg} onChange={(ev) => setMsg(ev.target.value)} />
-      <Input type="number" step="0.01" value={amount} onChange={(ev) => { setAmount(ev.target.value); setConfirmed(false); }} aria-label="Corrected amount" />
-      <label className="flex items-center gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} />I confirmed the corrected amount against my payment evidence.</label>
-      <Button disabled={!msg.trim() || !confirmed} onClick={() => onSend(msg, Number(amount))}>Resubmit</Button>
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      <Input aria-label="Corrected vendor" value={vendor} onChange={ev => change(setVendor, ev.target.value)} />
+      <Input type="number" step="0.01" value={amount} onChange={ev => change(setAmount, ev.target.value)} aria-label="Corrected amount" />
+      <Input type="date" aria-label="Corrected date" value={date} onChange={ev => change(setDate, ev.target.value)} />
+      <Input aria-label="Corrected document number" value={documentNumber} onChange={ev => change(setDocumentNumber, ev.target.value)} />
+      <Input aria-label="Corrected note" value={description} onChange={ev => change(setDescription, ev.target.value)} />
+      <Input placeholder="Your response" value={msg} onChange={ev => change(setMsg, ev.target.value)} />
+      <label className="flex items-center gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={v => setConfirmed(v === true)} aria-label="Confirm corrected expense" />I checked all corrected details and my personal payment evidence against the receipt.</label>
+      <Button disabled={busy || !msg.trim() || !confirmed} onClick={async () => { setBusy(true); try { await onSend(msg, { amount: Number(amount), vendor, date, documentNumber: documentNumber || null, description }); } catch { /* store reports failure */ } finally { setBusy(false); } }}>Resubmit</Button>
     </div>
   );
 }

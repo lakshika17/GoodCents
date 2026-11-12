@@ -61,9 +61,10 @@ const approvalMap: Record<ApprovalStatus, [keyof typeof tones, string]> = {
 export const ApprovalBadge = ({ s }: { s: ApprovalStatus }) => <Pill tone={approvalMap[s][0]}>{approvalMap[s][1]}</Pill>;
 
 export const reimbursementLabels: Record<ReimbursementStatus, string> = {
-  awaiting_authorization: "Awaiting authorization", queued: "Queued", processing: "Processing", paid: "Paid", failed: "Failed",
+  awaiting_authorization: "Awaiting authorization", queued: "Authorized", processing: "Processing", paid: "Paid", failed: "Failed",
+  needs_reconciliation: "Needs reconciliation", unclaimed: "Unclaimed / held",
 };
-const rbTone: Record<ReimbursementStatus, keyof typeof tones> = { awaiting_authorization: "warning", queued: "info", processing: "primary", paid: "success", failed: "danger" };
+const rbTone: Record<ReimbursementStatus, keyof typeof tones> = { awaiting_authorization: "warning", queued: "info", processing: "primary", paid: "success", failed: "danger", needs_reconciliation: "danger", unclaimed: "warning" };
 export const ReimbursementBadge = ({ s }: { s: ReimbursementStatus }) => <Pill tone={rbTone[s]}>{reimbursementLabels[s]}</Pill>;
 
 export function DemoBadge({ children }: { children?: ReactNode }) {

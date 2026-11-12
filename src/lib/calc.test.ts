@@ -24,3 +24,14 @@ describe("budget calculations", () => {
     expect(balanceAt(now, 90)).toBe(balanceAt(later, 90));
   });
 });
+
+describe("acceptance totals stay exact in cents", () => {
+  it("$312.38 approved and awaiting reimbursement against a $1,000 budget", () => {
+    const r: Reimbursement[] = [{ id: "rb", expenseId: "a", employeeId: "e", amount: 312.38, status: "awaiting_authorization", paypalReference: null, authorizedBy: null, history: [] }];
+    const s = summarize([b], [ex("a", 312.38, "approved"), ex("p1", 10, "pending"), ex("p2", 30, "pending"), ex("p3", 12.34, "pending")], r);
+    expect(Math.round(s.actual * 100)).toBe(31238);
+    expect(Math.round(s.approvedUnpaid * 100)).toBe(31238);
+    expect(Math.round(s.remaining * 100)).toBe(68762);
+    expect(s.remaining).toBe(687.62);
+  });
+});

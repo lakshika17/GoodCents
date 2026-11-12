@@ -68,7 +68,7 @@ function RoleSwitcher() {
   const { role, preview, setPreview, currentUser, mode, authenticatedDevelopment } = useStore();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  if (mode === "internal") return <div className="flex items-center gap-2"><div className="text-right text-xs"><p className="font-medium">{currentUser.name}</p><p className="text-muted-foreground">{role === "admin" ? "Founder" : role === "manager" ? "Manager" : "Employee"}</p></div><Button variant="outline" size="sm" onClick={() => void navigate({ to: '/demo' })}>Demo preview</Button><Button variant="outline" size="sm" onClick={async () => { await qc.cancelQueries(); qc.clear(); await supabase.auth.signOut(); await navigate({ to: "/auth", replace: true }); }}>Sign out</Button></div>;
+  if (mode === "internal") return <div className="flex items-center gap-2"><div className="text-right text-xs"><p className="font-medium">{currentUser.name}</p><p className="text-muted-foreground">{role === "finance" ? "Finance" : role === "admin" ? "Founder" : role === "manager" ? "Manager" : "Employee"}</p></div><Button variant="outline" size="sm" onClick={() => void navigate({ to: '/demo' })}>Demo preview</Button><Button variant="outline" size="sm" onClick={async () => { await qc.cancelQueries(); qc.clear(); await supabase.auth.signOut(); await navigate({ to: "/auth", replace: true }); }}>Sign out</Button></div>;
   return (
     <div className="flex items-center gap-2">
       <div className="hidden text-right text-xs leading-tight md:block">

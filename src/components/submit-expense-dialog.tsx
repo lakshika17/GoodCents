@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, FileText, FileUp, Keyboard, Loader2, MessageCircle, Sparkles } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from '@tanstack/react-query';
-import { readDocument } from "@/data/extraction.functions";
+import { getExtractionStatus, readDocument, startExtraction } from "@/data/extraction.functions";
+import { extractionIssues, mapExtractionToFields } from "@/lib/extraction-map";
+import { TERMINAL_EXTRACTION_STATES, type ExtractionEnvelope } from "@/lib/extraction-types";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -20,9 +22,11 @@ import { calendarDate, moneyInCents } from '@/lib/expense-contract';
 const ACCEPT = "image/jpeg,image/png,application/pdf";
 const blank = (departmentId: string) => ({ documentType: "" as DocumentType | "", vendor: "", amount: "", currency: "", documentNumber: "", date: "", category: "Office" as Category, departmentId, projectId: "", description: "", paymentResponsibility: 'unknown' as 'unknown' | 'employee_paid' | 'company_paid' | 'unpaid_supplier' });
 
-export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function SubmitExpenseDialog({ open, onOpenChange, draftKey }: { open: boolean; onOpenChange: (o: boolean) => void; draftKey?: string | undefined }) {
   const { currentUser, departments, projects, projectDepartments, submitExpense, saveDocument, mode, authenticatedDevelopment } = useStore();
   const read = useServerFn(readDocument);
+  const start = useServerFn(startExtraction);
+  const poll = useServerFn(getExtractionStatus);
   const queryClient = useQueryClient();
   const aiAvailable = mode === "internal" || authenticatedDevelopment;
   const [reading, setReading] = useState(false);
@@ -39,42 +43,100 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const attempts = useRef(new ExtractionAttempt());
   const submissionKey = useRef<string>(crypto.randomUUID());
   const uploadDone = useRef(false);
+  const extractionRequestId = useRef<string | null>(null);
+  const extractionUploadDone = useRef(false);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingStorageKey = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     attempts.current.select(); setReading(false);
-    if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setPaymentEvidenceConfirmed(false); setForm(blank(currentUser.departmentId)); setSource("manual"); setReadNote(""); submissionKey.current = crypto.randomUUID(); uploadDone.current = false; }
+    if (open) { setFile(null); setFileUrl(null); setPdfFailed(false); setVerified(false); setPaymentEvidenceConfirmed(false); setForm(blank(currentUser.departmentId)); setSource("manual"); setReadNote(""); submissionKey.current = crypto.randomUUID(); uploadDone.current = false; extractionRequestId.current = null; extractionUploadDone.current = false; if (pollTimer.current) clearTimeout(pollTimer.current); }
   }, [open, currentUser.departmentId]);
   useEffect(() => () => { if (fileUrl) URL.revokeObjectURL(fileUrl); }, [fileUrl]);
   useEffect(() => {
     if (!open || mode !== 'internal') return;
     let active = true;
+    const restoreAttempt = attempts.current.capture();
+    const canRestore = () => active && attempts.current.canApply(restoreAttempt);
     void (async () => {
       const identity = await supabase.auth.getUser();
-      if (!identity.data.user || !active) return;
+      if (!identity.data.user || !canRestore()) return;
       const key = `receipt-pending-${identity.data.user.id}`;
       pendingStorageKey.current = key;
-      const saved = sessionStorage.getItem(key);
-      if (!saved) return;
+      const saved = draftKey ? null : sessionStorage.getItem(key);
+      if (!saved) {
+        const drafts = await supabase.from('document_drafts').select('*').order('updated_at', { ascending: false });
+        const jobs = await supabase.from('extraction_jobs').select('*').order('created_at', { ascending: false });
+        const committed = await supabase.from('expenses').select('submission_key');
+        const keys = new Set(committed.data?.map(x => x.submission_key));
+        const cancelled = await supabase.from('cancelled_submissions').select('submission_key');
+        cancelled.data?.forEach(x => keys.add(x.submission_key));
+        const draft = drafts.data?.find(x => !keys.has(x.submission_key) && (!draftKey || x.submission_key === draftKey));
+        const job = jobs.data?.find(x => !keys.has(x.submission_key) && (!draftKey || x.submission_key === draftKey));
+        const rec = draft ?? job;
+        if (rec && canRestore()) {
+          const dl = await supabase.storage.from('private-receipts').download(rec.storage_path);
+          if (!canRestore() || !dl.data) return;
+          const savedData = draft?.data as { form?: typeof form; source?: DetailSource; fileName?: string; fileType?: string } | undefined;
+          const restored = new File([dl.data], savedData?.fileName ?? 'Restored receipt.pdf', { type: savedData?.fileType ?? 'application/pdf' });
+          submissionKey.current = rec.submission_key; extractionUploadDone.current = true;
+          setFile(restored); setFileUrl(URL.createObjectURL(restored));
+          setVerified(false); setPaymentEvidenceConfirmed(false);
+          if (savedData?.form) { setForm(savedData.form); setSource(savedData.source ?? 'manual'); attempts.current.edit(); }
+          const ownJob = jobs.data?.find(x => x.submission_key === rec.submission_key);
+          extractionRequestId.current = ownJob?.request_id ?? null;
+          setReadNote('Restored your saved document. Check the details and confirm again before submitting.');
+          const recoveredAttempt = attempts.current.capture();
+          if (savedData?.form) attempts.current.edit(); // Preserve saved corrections if polling finishes later.
+          if (ownJob?.envelope && (TERMINAL_EXTRACTION_STATES as readonly string[]).includes(ownJob.status)) {
+            if (!savedData?.form) applyEnvelope(ownJob.envelope as unknown as ExtractionEnvelope, recoveredAttempt);
+          } else if (ownJob) {
+            setReading(true);
+            pollExtraction(ownJob.request_id, recoveredAttempt, 0);
+          } else if (!savedData?.form) {
+            void runExtraction(restored, recoveredAttempt);
+          }
+          return;
+        }
+      }
+      if (!saved) {
+        // No interrupted submission: resume an in-progress document reading, if one was persisted.
+        const extSaved = sessionStorage.getItem(`receipt-extraction-${identity.data.user.id}`);
+        if (!extSaved) return;
+        try {
+          const rec = JSON.parse(extSaved) as { key: string; fileName: string; fileType: string };
+          const dl = await supabase.storage.from('private-receipts').download(`${identity.data.user.id}/${rec.key}`);
+          if (!canRestore() || !dl.data) return;
+          submissionKey.current = rec.key; extractionUploadDone.current = true;
+          const restored = new File([dl.data], rec.fileName, { type: rec.fileType });
+          setFile(restored); setFileUrl(URL.createObjectURL(restored));
+          setReadNote('Restored your document — checking its reading status…');
+          void runExtraction(restored, attempts.current.capture());
+        } catch { /* ignore unreadable restore records */ }
+        return;
+      }
       try {
         const pending = JSON.parse(saved) as { key: string; form: typeof form; source: DetailSource; fileName: string; fileType: string };
         const status = await supabase.rpc('submission_status', { submission_key: pending.key });
-        if (!active) return;
+        if (!canRestore()) return;
         if (status.error) { setReadNote('Previous submission status is unavailable. Retry later before uploading another receipt.'); uploadDone.current = true; submissionKey.current = pending.key; return; }
         if ((status.data as { committed?: boolean } | null)?.committed) {
           sessionStorage.removeItem(key); toast.success('Previous submission recovered — already saved once.'); await queryClient.invalidateQueries({ queryKey: ['internal'] }); return;
         }
         const downloaded = await supabase.storage.from('private-receipts').download(`${identity.data.user.id}/${pending.key}`);
-        if (!active) return;
+        if (!canRestore()) return;
         submissionKey.current = pending.key; uploadDone.current = true; setForm(pending.form); setSource(pending.source); setVerified(true); setPaymentEvidenceConfirmed(true);
-        if (downloaded.data) { const restored = new File([downloaded.data], pending.fileName, { type: pending.fileType }); setFile(restored); setFileUrl(URL.createObjectURL(restored)); }
+        let restored: File | null = null;
+        if (downloaded.data) { restored = new File([downloaded.data], pending.fileName, { type: pending.fileType }); setFile(restored); setFileUrl(URL.createObjectURL(restored)); }
         setReadNote('Previous submission restored. Retry unchanged, or cancel safely.');
+        // Resume the persisted extraction attempt for this document version, if one exists.
+        if (restored?.type === 'application/pdf') void runExtraction(restored, attempts.current.capture());
       } catch { if (active) { uploadDone.current = true; setReadNote('Previous submission needs recovery; do not create another expense.'); } }
     })();
     return () => { active = false; };
-  }, [open, mode, queryClient]);
+  }, [open, mode, queryClient, draftKey]);
 
   // Never pre-fill fields: automatic document reading is not connected, so every value is entered by a person.
   const onFile = (f: File | undefined) => {
@@ -86,7 +148,10 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
     setFile(f); setPdfFailed(false); setVerified(false); submissionKey.current = crypto.randomUUID();
     setFileUrl(URL.createObjectURL(f));
     setSource("manual"); setReadNote("");
-    if (aiAvailable) void runRead(f, attempt);
+    extractionRequestId.current = null; extractionUploadDone.current = false;
+    if (pendingStorageKey.current) sessionStorage.removeItem(`receipt-extraction-${pendingStorageKey.current.replace('receipt-pending-', '')}`);
+    if (aiAvailable && f.type === "application/pdf" && mode === "internal") void runExtraction(f, attempt);
+    else if (aiAvailable) void runRead(f, attempt);
   };
   const runRead = async (f: File, attempt: { selection: number; revision: number }) => {
     if (f.size > 10 * 1024 * 1024) { setReadNote("File is over 10 MB, so it can't be read automatically. Enter details manually."); return; }
@@ -108,6 +173,71 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
     } catch { if (attempts.current.current(attempt)) setReadNote("Automatic reading failed or timed out. Enter the details manually."); }
     finally { if (attempts.current.current(attempt)) setReading(false); }
   };
+
+  /** Render extraction flow for PDFs: upload the exact bytes to private storage, persist/reuse the attempt, then poll. */
+  const runExtraction = async (f: File, attempt: { selection: number; revision: number }) => {
+    if (f.size > 10 * 1024 * 1024) { setReadNote("File is over 10 MB, so it can't be read automatically. Enter details manually."); return; }
+    const selectedKey = submissionKey.current;
+    setReading(true);
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+      if (!extractionUploadDone.current) {
+        const uploaded = await supabase.storage.from("private-receipts").upload(`${data.user.id}/${selectedKey}`, f);
+        if (uploaded.error && !["409", "Duplicate"].includes(String(uploaded.error.statusCode))) throw uploaded.error;
+        if (!attempts.current.current(attempt)) return;
+        extractionUploadDone.current = true;
+      }
+      if (!attempts.current.current(attempt)) return;
+      const saved = await supabase.rpc('save_document_draft', { p_key: selectedKey, p_data: { fileName: f.name, fileType: f.type } });
+      if (saved.error) throw saved.error;
+      sessionStorage.setItem(`receipt-extraction-${data.user.id}`, JSON.stringify({ key: selectedKey, fileName: f.name, fileType: f.type }));
+      const started = await start({ data: { submissionKey: selectedKey, fileName: f.name } });
+      if (!attempts.current.current(attempt)) return;
+      if (started.requestId) extractionRequestId.current = started.requestId;
+      if (!started.ok || !started.requestId) { setReadNote(started.error ?? "Automatic reading is unavailable. Your document is saved; reopen it to recover the same request."); setReading(false); return; }
+      extractionRequestId.current = started.requestId;
+      if (started.envelope && (TERMINAL_EXTRACTION_STATES as readonly string[]).includes(started.envelope.status)) { applyEnvelope(started.envelope, attempt); return; }
+      setReadNote("Reading document with AI…");
+      pollExtraction(started.requestId, attempt, 0);
+    } catch { if (attempts.current.current(attempt)) { setReadNote("Automatic reading failed. Enter the details manually."); setReading(false); } }
+  };
+  const pollExtraction = (requestId: string, attempt: { selection: number; revision: number }, count: number) => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    if (count >= 48) {
+      if (attempts.current.current(attempt)) { setReadNote("Reading is taking longer than usual. Your request is saved — reopen this dialog later to check it, or enter the details manually."); setReading(false); }
+      return;
+    }
+    pollTimer.current = setTimeout(() => {
+      void (async () => {
+        if (!attempts.current.current(attempt)) return;
+        try {
+          const res = await poll({ data: { requestId } });
+          if (!attempts.current.current(attempt)) return;
+          if (res.ok && res.envelope && (TERMINAL_EXTRACTION_STATES as readonly string[]).includes(res.envelope.status)) { applyEnvelope(res.envelope, attempt); return; }
+          if (!res.ok) { setReadNote(res.error ?? "Automatic reading is unavailable. Enter the details manually."); setReading(false); return; }
+          pollExtraction(requestId, attempt, count + 1);
+        } catch { pollExtraction(requestId, attempt, count + 1); }
+      })();
+    }, 2000 + Math.random() * 1500);
+  };
+  const applyEnvelope = (envelope: ExtractionEnvelope, attempt: { selection: number; revision: number }) => {
+    setReading(false);
+    if (!attempts.current.canApply(attempt)) { setReadNote("Automatic reading finished after your edits. Your entries were kept; compare them with the document."); return; }
+    if (envelope.status === "completed" || envelope.status === "needs_review") {
+      const fields = mapExtractionToFields(envelope);
+      setForm((s) => ({ ...s, vendor: fields.vendor, amount: fields.amount, currency: fields.currency, date: fields.date, documentNumber: fields.documentNumber }));
+      setSource("ai");
+      const issues = extractionIssues(envelope);
+      setReadNote(envelope.status === "needs_review"
+        ? `Read by AI — needs review. ${issues.join(" ") || "Check every field against the document."}`
+        : "Read by AI — check every field against the document.");
+    } else if (envelope.status === "failed") {
+      setReadNote("Automatic reading failed for this document. Enter the details manually.");
+    } else {
+      setReadNote("Automatic reading outcome is uncertain and needs operator recovery. Your request is saved; enter the details manually.");
+    }
+  };
   const update = (patch: Partial<typeof form>) => { if (uploadDone.current || submittingRef.current) { toast.error('Retry the unchanged submission first.'); return; } attempts.current.edit(); setForm((s) => ({ ...s, ...patch })); setVerified(false); setSource((x) => (x === "ai" ? "ai_corrected" : x)); };
 
   const projectOptions = projects.filter((p) => projectDepartments.some((pd) => pd.projectId === p.id && pd.departmentId === form.departmentId));
@@ -118,8 +248,27 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   const canSaveDocument = !!form.documentType && !eligible && complete && verified;
   const isPdf = file?.type === "application/pdf";
 
-  const record = (status: "draft" | "saved") => {
+  const record = async (status: "draft" | "saved") => {
     if (!form.documentType) return;
+    if (mode === 'internal') {
+      if (!file || submittingRef.current) { toast.error('Attach a document before saving a draft.'); return; }
+      submittingRef.current = true; setSubmitting(true);
+      try {
+        const identity = await supabase.auth.getUser();
+        if (!identity.data.user) return;
+        const path = `${identity.data.user.id}/${submissionKey.current}`;
+        if (!extractionUploadDone.current && !uploadDone.current) {
+          const uploaded = await supabase.storage.from('private-receipts').upload(path, file);
+          if (uploaded.error && !['409', 'Duplicate'].includes(String(uploaded.error.statusCode))) throw uploaded.error;
+          extractionUploadDone.current = true;
+        }
+        const saved = await supabase.rpc('save_document_draft', { p_key: submissionKey.current, p_data: { form, source, fileName: file.name, fileType: file.type } });
+        if (saved.error) throw saved.error;
+        await queryClient.invalidateQueries({ queryKey: ['internal'] }); toast.success('Draft saved — no approval requested'); onOpenChange(false);
+      } catch { toast.error('Draft could not be saved. Your attachment was kept for recovery.'); }
+      finally { submittingRef.current = false; setSubmitting(false); }
+      return;
+    }
     saveDocument({ documentType: form.documentType, status, vendor: form.vendor.trim(), amount: amount && amount > 0 ? amount : null, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, verified, currency: form.currency, source, documentNumber: form.documentNumber, fileName: file?.name ?? null, fileType: file?.type ?? null, previewUrl: fileUrl });
     if (mode === "demo") { toast.success(status === "draft" ? "Saved as draft — no approval requested" : `${form.documentType} saved — not counted as spending`); onOpenChange(false); }
   };
@@ -136,19 +285,19 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
       storagePath = `${data.user.id}/${submissionKey.current}`;
       pendingStorageKey.current = `receipt-pending-${data.user.id}`;
       sessionStorage.setItem(pendingStorageKey.current, JSON.stringify({ key: submissionKey.current, form, source, fileName: file.name, fileType: file.type }));
-      if (!uploadDone.current) {
+      if (!uploadDone.current && !extractionUploadDone.current) {
         const uploaded = await supabase.storage.from("private-receipts").upload(storagePath, file);
         if (uploaded.error && !['409','Duplicate'].includes(String(uploaded.error.statusCode))) throw uploaded.error;
         uploadDone.current = true;
       }
     }
     await submitExpense(
-      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, documentType: form.documentType, documentNumber: form.documentNumber.trim() || null, verified, currency: form.currency, source, submissionKey: submissionKey.current, paymentResponsibility: form.paymentResponsibility, paymentEvidenceConfirmed },
+      { vendor: form.vendor.trim(), amount, date: form.date, category: form.category, departmentId: form.departmentId, projectId: form.projectId || null, description: form.description, documentType: form.documentType, documentNumber: form.documentNumber.trim() || null, verified, currency: form.currency, source, submissionKey: submissionKey.current, paymentResponsibility: form.paymentResponsibility, paymentEvidenceConfirmed, extractionRequestId: extractionRequestId.current },
       file ? { fileName: file.name, fileType: file.type, previewUrl: file.type.startsWith("image/") || isPdf ? fileUrl : null, extractionSimulated: false, storagePath } : undefined,
     );
     toast.success(mode === "demo" ? "Expense submitted for approval (demo)" : "Expense submitted for approval");
-    if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current);
-    uploadDone.current = false;
+    if (pendingStorageKey.current) { sessionStorage.removeItem(pendingStorageKey.current); sessionStorage.removeItem(`receipt-extraction-${pendingStorageKey.current.replace('receipt-pending-', '')}`); }
+    uploadDone.current = false; extractionUploadDone.current = false; extractionRequestId.current = null;
     onOpenChange(false);
     } catch (error) {
       if (mode === 'internal' && storagePath) {
@@ -162,7 +311,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
   };
   const cancelSubmission = async () => {
     if (submittingRef.current) return;
-    if (mode === 'internal' && uploadDone.current) {
+    if (mode === 'internal' && (uploadDone.current || extractionUploadDone.current)) {
       const cancelled = await supabase.rpc('cancel_expense_submission', { submission_key: submissionKey.current });
       if (cancelled.error || cancelled.data !== true) { toast.error('Submission may already be saved. Its attachment was not deleted.'); return; }
       const identity = await supabase.auth.getUser();
@@ -170,8 +319,8 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
       const removed = await supabase.storage.from('private-receipts').remove([`${identity.data.user.id}/${submissionKey.current}`]);
       if (removed.error) { toast.error('Cancelled safely; attachment cleanup is still pending.'); return; }
     }
-    if (pendingStorageKey.current) sessionStorage.removeItem(pendingStorageKey.current);
-    uploadDone.current = false; onOpenChange(false);
+    if (pendingStorageKey.current) { sessionStorage.removeItem(pendingStorageKey.current); sessionStorage.removeItem(`receipt-extraction-${pendingStorageKey.current.replace('receipt-pending-', '')}`); }
+    uploadDone.current = false; extractionUploadDone.current = false; extractionRequestId.current = null; onOpenChange(false);
   };
 
   return (
@@ -203,7 +352,7 @@ export function SubmitExpenseDialog({ open, onOpenChange }: { open: boolean; onO
             )}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={() => camRef.current?.click()}><Camera className="h-4 w-4" />Camera</Button>
-              <Button variant="outline" size="sm" disabled={submitting || uploadDone.current} onClick={() => { attempts.current.select(); setReading(false); setFile(null); setFileUrl(null); setVerified(false); setPaymentEvidenceConfirmed(false); setForm(blank(currentUser.departmentId)); setSource('manual'); setReadNote(''); }}><Keyboard className="h-4 w-4" />Type manually</Button>
+              <Button variant="outline" size="sm" disabled={submitting || uploadDone.current} onClick={() => { attempts.current.edit(); if (pollTimer.current) clearTimeout(pollTimer.current); setReading(false); setVerified(false); setPaymentEvidenceConfirmed(false); setSource(x => x === 'ai' ? 'ai_corrected' : x); setReadNote('Enter and check the details against the attached document. Its saved reading request is retained.'); }}><Keyboard className="h-4 w-4" />Type manually</Button>
             </div>
             {aiAvailable
               ? <p className="rounded-lg border px-3 py-2 text-xs text-muted-foreground">{reading ? <span className="flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" />Reading document with AI…</span> : readNote || "Uploaded documents are read with AI. You check and correct every field before saving."}</p>

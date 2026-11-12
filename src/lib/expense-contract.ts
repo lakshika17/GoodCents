@@ -21,5 +21,6 @@ export const persistedExpense = z.object({
   category: z.enum(['Lab Supplies','Software','Travel','Meals','Equipment','Office','Training','Services']),
   departmentId: id, projectId: id.nullable(), description: z.string().max(2000),
   receipt: z.object({ fileName: z.string().min(1).max(255), fileType: z.enum(['image/jpeg','image/png','application/pdf']), storagePath: z.string().min(1).max(500) }),
+  extractionRequestId: z.string().uuid().nullish(),
 });
 export type PersistedExpenseInput = z.infer<typeof persistedExpense>;

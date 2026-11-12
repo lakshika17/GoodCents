@@ -19,7 +19,7 @@ export const loadInternal = createServerFn({ method: 'GET' }).middleware([requir
   const { data: profile, error } = await db.from('profiles').select('*').eq('id', context.userId).single();
   const { data: employeeId } = await db.rpc('current_employee');
   if (error || !profile || !employeeId) throw new Error('Your account is not an active invited GoodCents user.');
-  const tables = ['departments','employees','projects','project_departments','budgets','expenses','receipts','approvals','reimbursements','notifications','approval_policies','user_roles','access_requests','access_grants','audit_log'] as const;
+  const tables = ['departments','employees','projects','project_departments','budgets','expenses','receipts','approvals','reimbursements','notifications','approval_policies','user_roles','access_requests','access_grants','audit_log','expense_revisions','document_drafts','extraction_jobs','payment_intents','payout_recipients'] as const;
   const results = await Promise.all(tables.map(async table => {
     const rows: Json[] = [];
     for (let offset = 0; ; offset += 1000) {

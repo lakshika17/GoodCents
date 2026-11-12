@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { loadDeveloperAccess, loadInternal, performInternal } from "./internal.functions";
+import { authorizePayment, checkPaymentStatus } from "./payments.functions";
 import { actionSchema } from "./action-schema";
 import { DEMO_PREVIEWS, isDemoPreview, type DemoPreview } from './demo-preview';
 import { AuthScreen } from "@/components/auth-screen";
@@ -13,7 +14,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type {
   AppNotification, ApprovalPolicy, Approval, Budget, Department, Employee, Expense, NotificationType,
-  Project, ProjectDepartment, Receipt, Reimbursement, ReimbursementStatus, Role, SavedDocument,
+  PaymentIntent, PayoutRecipient, Project, ProjectDepartment, Receipt, Reimbursement, ReimbursementStatus, Role, SavedDocument,
 } from "./types";
 
 // Central in-memory demo state. All pages read/write through this hook only,
@@ -144,10 +145,13 @@ function useStoreValue() {
     ...s, role, setRole, preview, setPreview, authenticatedDevelopment: false, currentUser, uid, visibleNotifications, mode: "demo" as "demo" | "internal", canAuthorize: DEMO_PREVIEWS[preview].canAuthorize, sharedTotals: [] as { project_id: string; approved_total: number; pending_total: number }[],
     submitExpense, saveDocument, voidDocument, voidExpense, decide, respondToChanges, setReimbursementStatus, upsertBudget, upsertEmployee, removeEmployee,
     upsertDepartment, upsertProject, setPolicy, markAllRead,
+    paymentIntents: [] as PaymentIntent[], payoutRecipients: [] as PayoutRecipient[],
+    authorizePayment: async (_reimbursementId: string, _expectedRevision: number) => { toast.error('Sandbox payment authorization is only available for authorized records.'); },
+    checkPaymentStatus: async (_reimbursementId: string) => { toast.error('Payment status checks are only available for authorized records.'); },
   };
 }
 
-type Store = ReturnType<typeof useStoreValue>;
+type Store = Omit<ReturnType<typeof useStoreValue>, 'role'> & { role: Role };
 const Ctx = createContext<Store | null>(null);
 function DemoProvider({ children, authenticated = false }: { children: ReactNode; authenticated?: boolean }) {
   const v = useStoreValue();
@@ -187,6 +191,8 @@ function SignedInProvider({ children }: { children: ReactNode }) {
 function InternalProvider({ children }: { children: ReactNode }) {
   const fetchData = useServerFn(loadInternal);
   const perform = useServerFn(performInternal);
+  const authorize = useServerFn(authorizePayment);
+  const checkStatus = useServerFn(checkPaymentStatus);
   const qc = useQueryClient();
   const query = useQuery({ queryKey: ['internal'], queryFn: () => fetchData(), retry: false });
   if (query.isPending) return <p className="p-6 text-muted-foreground">Loading your authorized records…</p>;
@@ -199,13 +205,14 @@ function InternalProvider({ children }: { children: ReactNode }) {
   const employeeId = query.data.profile.employee_id;
   const currentUser = employees.find(e => e.id === employeeId);
   if (!currentUser) return <p className="p-6">Employee profile unavailable.</p>;
-  const role = currentUser.role;
+  const trustedRoles = rows('user_roles').map(r => r['role']);
+  const role = trustedRoles.includes('manager') ? 'manager' : trustedRoles.includes('finance') ? 'finance' : trustedRoles.includes('founder') ? 'admin' : 'employee';
   const mutate = async (action: string, payload: unknown) => {
     try { const validated = actionSchema.parse({ action, payload }); await perform({ data: validated }); await qc.invalidateQueries({ queryKey: ['internal'] }); }
     catch (error) { toast.error(error instanceof Error ? error.message : 'Action failed'); throw error; }
   };
   const denied = () => { toast.error('Workbook employee and department records are managed by the founder through invitations.'); };
-  const expenses = dataRows<Expense>('expenses');
+  const expenses = rows('expenses').map(r => ({ ...r['data'], id: r['id'], version: r['document_version'], workflowState: r['workflow_state'], amount: r['amount_cents'] == null ? r['data'].amount : Number(r['amount_cents']) / 100, amountCents: Number(r['amount_cents']) })) as Expense[];
   const notifications = dataRows<AppNotification>('notifications');
   const value: Store = {
     departments: rows('departments').map(r => ({ id: r["id"], name: r["name"], managerId: r["manager_id"] })), employees,
@@ -214,13 +221,31 @@ function InternalProvider({ children }: { children: ReactNode }) {
     policy: (rows('approval_policies')[0]?.['data'] ?? seed.defaultPolicy) as ApprovalPolicy,
     role, setRole: denied, preview: 'developer', setPreview: denied, authenticatedDevelopment: false, currentUser, uid: prefix => `${prefix}-${crypto.randomUUID()}`, visibleNotifications: notifications,
     mode: 'internal', canAuthorize: rows('user_roles').some(r => r["role"] === 'finance'), sharedTotals: query.data.sharedTotals,
-    documents: [],
+    paymentIntents: rows('payment_intents').map(r => ({ id: r['id'], reimbursementId: r['reimbursement_id'], expenseId: r['expense_id'], employeeId: r['employee_id'], amountCents: Number(r['amount_cents']), currency: r['currency'], sourceRevision: Number(r['source_revision']), recipientEmail: r['recipient_email'], senderBatchId: r['sender_batch_id'], status: r['status'], paypalBatchId: r['paypal_batch_id'] ?? null, payoutItemId: r['payout_item_id'] ?? null, transactionId: r['transaction_id'] ?? null, providerStatus: r['provider_status'] ?? null, authorizedAt: r['authorized_at'], dispatchedAt: r['dispatched_at'] ?? null })) as PaymentIntent[],
+    payoutRecipients: rows('payout_recipients').map(r => ({ employeeId: r['employee_id'], receiverEmail: r['receiver_email'], note: r['note'], active: r['active'] })) as PayoutRecipient[],
+    authorizePayment: async (reimbursementId: string, expectedRevision: number) => {
+      const result = await authorize({ data: { reimbursementId, expectedRevision } });
+      await qc.invalidateQueries({ queryKey: ['internal'] });
+      if (!result.ok) { toast.error(result.error); throw new Error(result.error); }
+      if (result.dispatch === 'not_configured') toast.message('Authorized. Sandbox credentials are not configured yet, so no payout was sent.');
+      else toast.success(result.dispatch === 'sent' ? 'Sandbox payout submitted' : 'Existing payment reused — no duplicate sent');
+    },
+    checkPaymentStatus: async (reimbursementId: string) => {
+      const result = await checkStatus({ data: { reimbursementId } });
+      await qc.invalidateQueries({ queryKey: ['internal'] });
+      if (!result.ok) { toast.error(result.error); throw new Error(result.error); }
+      toast.success(`Payment status: ${result.intent.status}`);
+    },
+    documents: rows('document_drafts').filter(r => !expenses.some(e => e.submissionKey === r['submission_key'])).map(r => {
+      const d = r['data']; const f = d.form ?? {};
+      return { id: r['submission_key'], employeeId: currentUser.id, documentType: f.documentType || 'Paid Receipt', status: 'draft', vendor: f.vendor || '', amount: f.amount ? Number(f.amount) : null, date: f.date || '', category: f.category || 'Office', departmentId: f.departmentId || currentUser.departmentId, projectId: f.projectId || null, description: f.description || '', verified: false, currency: f.currency || '', source: d.source || 'manual', documentNumber: f.documentNumber || '', fileName: d.fileName || 'Restored receipt.pdf', fileType: d.fileType || 'application/pdf', previewUrl: null, createdAt: r['updated_at'] };
+    }),
     saveDocument: () => { toast.error('Drafts, quotes and other non-expense documents cannot be saved to company records yet.'); },
     voidDocument: () => { toast.error('Voiding company records is not available yet.'); },
     voidExpense: () => { toast.error('Voiding company records is not available yet.'); },
     submitExpense: async (e, receipt) => { await mutate('expense', { ...e, documentNumber: e.documentNumber ?? null, receipt: receipt ? { fileName: receipt.fileName, fileType: receipt.fileType, storagePath: receipt.storagePath } : undefined }); },
     decide: (id, decision, comment) => mutate('decision', { id, version: expenses.find(e => e.id === id)?.version ?? 1, decision, comment }),
-    respondToChanges: (id, response, patch) => mutate('respond', { id, version: expenses.find(e => e.id === id)?.version ?? 1, verified: patch.verified, response, amount: patch.amount }),
+    respondToChanges: (id, response, patch) => mutate('respond', { id, version: expenses.find(e => e.id === id)?.version ?? 1, verified: patch.verified, response, amount: patch.amount, vendor: patch.vendor, date: patch.date, documentNumber: patch.documentNumber, description: patch.description }),
     setReimbursementStatus: (id, status) => mutate('reimbursement', { id, status }),
     upsertBudget: b => mutate('budget', b), upsertEmployee: denied, removeEmployee: denied, upsertDepartment: denied,
     upsertProject: (p, departmentIds) => mutate('project', { id: p.id, project: p, departmentIds }),

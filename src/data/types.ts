@@ -1,6 +1,6 @@
 import type { DocumentStatus, DocumentType } from "@/lib/documents";
 // Entity types mirror the planned backend tables 1:1 so demo data can be swapped for API responses.
-export type Role = "employee" | "manager" | "admin";
+export type Role = "employee" | "manager" | "finance" | "admin";
 
 export interface Department { id: string; name: string; managerId: string | null }
 export interface Employee { id: string; name: string; email: string; role: Role; departmentId: string; managerId: string | null; title: string }
@@ -26,6 +26,8 @@ export interface Expense {
   documentNumber?: string | null; submissionKey?: string; version?: number;
   paymentResponsibility?: 'employee_paid' | 'company_paid' | 'unpaid_supplier' | 'unknown'; paymentEvidenceConfirmed?: boolean;
   confirmedBy?: string | null; confirmedAt?: string | null;
+  extractionRequestId?: string | null;
+  workflowState?: string; amountCents?: number;
 }
 export interface Receipt { id: string; fileName: string; fileType: string; previewUrl: string | null; extractionSimulated: boolean; storagePath?: string | undefined }
 
@@ -41,14 +43,26 @@ export interface SavedDocument {
 
 export interface Approval {
   id: string; expenseId: string; managerId: string; decision: Exclude<ApprovalStatus, "pending">;
-  comment: string; date: string; employeeResponse?: string;
+  comment: string; date: string; employeeResponse?: string; version?: number;
 }
 
 // Kept separate from ApprovalStatus: approved never implies paid.
-export type ReimbursementStatus = "awaiting_authorization" | "queued" | "processing" | "paid" | "failed";
+export type ReimbursementStatus = "awaiting_authorization" | "queued" | "processing" | "paid" | "failed" | "needs_reconciliation" | "unclaimed";
+
+/** Durable sandbox payment intent; one per reimbursement, server-managed. */
+export interface PaymentIntent {
+  id: string; reimbursementId: string; expenseId: string; employeeId: string;
+  amountCents: number; currency: string; sourceRevision: number; recipientEmail: string;
+  senderBatchId: string; status: string; paypalBatchId: string | null; payoutItemId: string | null;
+  transactionId: string | null; providerStatus: string | null; authorizedAt: string; dispatchedAt: string | null;
+}
+
+/** Server-controlled mapping from employee to PayPal Sandbox recipient (finance-visible). */
+export interface PayoutRecipient { employeeId: string; receiverEmail: string; note: string; active: boolean }
 export interface Reimbursement {
   id: string; expenseId: string; employeeId: string; amount: number; status: ReimbursementStatus;
   paypalReference: string | null; authorizedBy: string | null;
+  currency?: string; sourceRevision?: number; amountCents?: number;
   history: { date: string; status: ReimbursementStatus; note: string }[];
 }
 
@@ -58,7 +72,7 @@ export interface FinancialScenario { id: string; name: string; amount: number; b
 
 export type NotificationType =
   | "expense_submitted" | "missing_info" | "approval_requested" | "expense_approved"
-  | "changes_requested" | "reimbursement_initiated" | "payment_completed" | "payment_failed" | "budget_threshold";
+  | "changes_requested" | "reimbursement_initiated" | "payment_completed" | "payment_failed" | "payment_reconciliation" | "budget_threshold";
 export interface AppNotification { id: string; type: NotificationType; message: string; date: string; read: boolean; audience: Role[]; employeeId?: string | undefined }
 
 export interface ApprovalPolicy { autoFlagAbove: number; receiptRequiredAbove: number; duplicateWindowDays: number; restrictedCategories: Category[]; budgetAlertPercent: number }

@@ -36,6 +36,55 @@
       "when": 1793772088375,
       "tag": "0004_confirmed_idempotent_receipt_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793855114268,
+      "tag": "0005_extraction_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793855188633,
+      "tag": "0006_extraction_snapshot_stickiness",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793856596932,
+      "tag": "0007_trusted_extraction_and_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793856620115,
+      "tag": "0008_three_role_revision_transitions",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793857908141,
+      "tag": "0009_extraction_dispatch_claim",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793859607075,
+      "tag": "0010_paypal_sandbox_payment_intents",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793859851451,
+      "tag": "0011_fix_payment_status_mismatch_array",
+      "breakpoints": true
     }
   ]
 }

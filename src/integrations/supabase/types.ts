@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.18"
-  }
   public: {
     Tables: {
       access_grants: {
@@ -293,6 +288,30 @@ export type Database = {
         }
         Relationships: []
       }
+      document_drafts: {
+        Row: {
+          data: Json
+          owner_id: string
+          storage_path: string
+          submission_key: string
+          updated_at: string
+        }
+        Insert: {
+          data: Json
+          owner_id: string
+          storage_path: string
+          submission_key: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          owner_id?: string
+          storage_path?: string
+          submission_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           access_role: string
@@ -344,6 +363,41 @@ export type Database = {
           },
         ]
       }
+      expense_revisions: {
+        Row: {
+          amount_cents: number
+          expense_id: string
+          revision: number
+          snapshot: Json
+          submitted_at: string
+          submitted_by: string
+        }
+        Insert: {
+          amount_cents: number
+          expense_id: string
+          revision: number
+          snapshot: Json
+          submitted_at?: string
+          submitted_by: string
+        }
+        Update: {
+          amount_cents?: number
+          expense_id?: string
+          revision?: number
+          snapshot?: Json
+          submitted_at?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_revisions_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount_cents: number | null
@@ -352,12 +406,14 @@ export type Database = {
           department_id: string
           document_version: number
           employee_id: string
+          extraction_request_id: string | null
           id: string
           organization_id: string
           project_id: string | null
           submission_actor: string | null
           submission_key: string | null
           submission_payload: Json | null
+          workflow_state: string
         }
         Insert: {
           amount_cents?: number | null
@@ -366,12 +422,14 @@ export type Database = {
           department_id: string
           document_version?: number
           employee_id: string
+          extraction_request_id?: string | null
           id: string
           organization_id?: string
           project_id?: string | null
           submission_actor?: string | null
           submission_key?: string | null
           submission_payload?: Json | null
+          workflow_state?: string
         }
         Update: {
           amount_cents?: number | null
@@ -380,12 +438,14 @@ export type Database = {
           department_id?: string
           document_version?: number
           employee_id?: string
+          extraction_request_id?: string | null
           id?: string
           organization_id?: string
           project_id?: string | null
           submission_actor?: string | null
           submission_key?: string | null
           submission_payload?: Json | null
+          workflow_state?: string
         }
         Relationships: [
           {
@@ -411,6 +471,45 @@ export type Database = {
           },
         ]
       }
+      extraction_jobs: {
+        Row: {
+          created_at: string
+          dispatch_claimed_at: string | null
+          envelope: Json | null
+          owner_id: string
+          pdf_sha256: string
+          request_id: string
+          status: string
+          storage_path: string
+          submission_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dispatch_claimed_at?: string | null
+          envelope?: Json | null
+          owner_id: string
+          pdf_sha256: string
+          request_id: string
+          status?: string
+          storage_path: string
+          submission_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dispatch_claimed_at?: string | null
+          envelope?: Json | null
+          owner_id?: string
+          pdf_sha256?: string
+          request_id?: string
+          status?: string
+          storage_path?: string
+          submission_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           data: Json
@@ -428,6 +527,147 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_intents: {
+        Row: {
+          amount_cents: number
+          authorized_at: string
+          authorized_by: string
+          created_at: string
+          currency: string
+          dispatch_claimed_at: string | null
+          dispatched_at: string | null
+          employee_id: string
+          expense_id: string
+          id: string
+          payload: Json
+          payload_digest: string
+          payout_item_id: string | null
+          paypal_batch_id: string | null
+          paypal_request_id: string
+          provider_error: Json | null
+          provider_status: string | null
+          recipient_email: string
+          reimbursement_id: string
+          resolved_at: string | null
+          sender_batch_id: string
+          sender_item_id: string
+          source_revision: number
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          authorized_at?: string
+          authorized_by: string
+          created_at?: string
+          currency: string
+          dispatch_claimed_at?: string | null
+          dispatched_at?: string | null
+          employee_id: string
+          expense_id: string
+          id: string
+          payload: Json
+          payload_digest: string
+          payout_item_id?: string | null
+          paypal_batch_id?: string | null
+          paypal_request_id: string
+          provider_error?: Json | null
+          provider_status?: string | null
+          recipient_email: string
+          reimbursement_id: string
+          resolved_at?: string | null
+          sender_batch_id: string
+          sender_item_id: string
+          source_revision: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          authorized_at?: string
+          authorized_by?: string
+          created_at?: string
+          currency?: string
+          dispatch_claimed_at?: string | null
+          dispatched_at?: string | null
+          employee_id?: string
+          expense_id?: string
+          id?: string
+          payload?: Json
+          payload_digest?: string
+          payout_item_id?: string | null
+          paypal_batch_id?: string | null
+          paypal_request_id?: string
+          provider_error?: Json | null
+          provider_status?: string | null
+          recipient_email?: string
+          reimbursement_id?: string
+          resolved_at?: string | null
+          sender_batch_id?: string
+          sender_item_id?: string
+          source_revision?: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_intents_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_intents_reimbursement_id_fkey"
+            columns: ["reimbursement_id"]
+            isOneToOne: true
+            referencedRelation: "reimbursements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payout_recipients: {
+        Row: {
+          active: boolean
+          employee_id: string
+          note: string
+          receiver_email: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          employee_id: string
+          note?: string
+          receiver_email: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          employee_id?: string
+          note?: string
+          receiver_email?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_recipients_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -606,6 +846,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      authorize_reimbursement_payment: {
+        Args: { _expected_revision: number; _reimbursement: string }
+        Returns: Json
+      }
+      begin_extraction: {
+        Args: {
+          p_pdf_sha256: string
+          p_request_id: string
+          p_storage_path: string
+          p_submission_key: string
+        }
+        Returns: Json
+      }
+      begin_extraction_trusted: {
+        Args: {
+          p_owner: string
+          p_pdf_sha256: string
+          p_request_id: string
+          p_submission_key: string
+        }
+        Returns: Json
+      }
       can_department: { Args: { _department: string }; Returns: boolean }
       can_expense: { Args: { _expense: string }; Returns: boolean }
       can_project: { Args: { _project: string }; Returns: boolean }
@@ -613,6 +875,11 @@ export type Database = {
         Args: { submission_key: string }
         Returns: boolean
       }
+      claim_extraction_dispatch: {
+        Args: { p_owner: string; p_request_id: string }
+        Returns: boolean
+      }
+      claim_payment_dispatch: { Args: { _intent: string }; Returns: boolean }
       current_employee: { Args: never; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       internal_action: {
@@ -621,6 +888,35 @@ export type Database = {
       }
       internal_action_legacy: {
         Args: { action: string; payload: Json }
+        Returns: undefined
+      }
+      internal_action_v1: {
+        Args: { action: string; payload: Json }
+        Returns: undefined
+      }
+      record_payment_dispatch: {
+        Args: { _intent: string; _outcome: Json }
+        Returns: undefined
+      }
+      record_payment_status: {
+        Args: { _intent: string; _result: Json }
+        Returns: undefined
+      }
+      save_document_draft: {
+        Args: { p_data: Json; p_key: string }
+        Returns: undefined
+      }
+      save_extraction_snapshot: {
+        Args: { p_envelope: Json; p_request_id: string; p_status: string }
+        Returns: undefined
+      }
+      save_extraction_snapshot_trusted: {
+        Args: {
+          p_envelope: Json
+          p_owner: string
+          p_request_id: string
+          p_status: string
+        }
         Returns: undefined
       }
       shared_project_totals: {
@@ -765,3 +1061,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

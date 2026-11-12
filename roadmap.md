@@ -1,22 +1,13 @@
-# Quantera internal access update
-- [x] Repair persistent document contract, extraction races, idempotency, storage recovery, and approval integrity; run isolated PostgreSQL and existing regressions.
-- [ ] Run persistent internal-path browser acceptance with isolated employee/manager identities. In progress: handed to an isolated draft (own test database, no company data) with the full acceptance scope; main-project preview stays company-connected and must not be used for test writes.
-- [x] Replace demo/development team references with all five exact workbook employees, default to Lakshika, preserve sample financial math and authentication, and inspect all ten screens.
-- [x] Explain how to invite Zichen as project Editor without ownership transfer or company-data access.
-- [x] Deliver beginner-friendly current-interface guide, readiness checklist, integration responsibilities, and pre-upload verification requirements.
-- [x] Add clearly labeled fictional Developer/Admin, Employee, Manager, Finance, and Terry previews without changing the design or ten sections.
-- [x] Determine developer account status and configure isolated development-only eligibility requiring verified sign-in; explain secure account provisioning.
-- [x] Provision lakshika.sarupria@quantera.as as a verified account linked to EMP-005 with development Admin eligibility; dashboard verified with a test session.
-- [ ] Confirm Lakshika's own "Sign in with Lovable" click completes. Waits on: Lakshika signing in herself.
-- [ ] Invite Zichen as project Editor and provision verified development app access. Blocked: project collaboration invitation requires owner action; his app identity is not verified.
-- [ ] Read the separate backend repository and its database, then report how to integrate it. Waits on: the repo URL; private repos need a ZIP upload because this workspace role cannot create connector connections.
-- [x] Enable Cloud and invitation-only employee sign-in.
-- [x] Configure five workbook employees and departments with separate roles.
-- [x] Implement organization/department/project permissions, private receipts, audit history, and access requests.
-- [x] Connect existing screens through the central store without redesigning them.
-- [x] Separate fictional demo finances from internal records; keep PayPal simulated.
-- [x] Verify signed-out visibility, all ten demo pages, and existing tests.
-- [x] Verify password login, founder-equivalent visibility, employee isolation, shared totals, access approval/rejection/revocation, and direct backend restrictions using temporary fictional accounts and records; remove all fixtures afterward.
-- [x] Run dashboard/expense feature regressions and document exact passes, failures, and unverified checks without changing the existing design or features.
-- [ ] Verify real employee invitation acceptance separately. Blocked: user explicitly prohibits real invitations during this test.
-- [ ] Verify invitation and recovery links on the intended HTTPS site. Blocked: employee invitation not yet accepted and app intentionally unpublished.
+# Payment module milestone (isolated draft) — complete
+
+- [x] Read PayPal Payouts docs (payouts-post, payouts-item-get, authentication)
+- [x] Migration 0010 (+0011 fix): payment_intents, payout_recipients, status widening, finance RPCs, notifications
+- [x] PayPal server module (OAuth, create payout, get item; sandbox-only origin)
+- [x] Server functions: authorizePayment, checkPaymentStatus, same-identity recovery
+- [x] UI: Finance confirmation + dispatch, status views, employee view, notifications
+- [x] Unit/mocked tests: 79/79 unit, 38/38 API checks
+- [x] Secrets saved via secure form
+- [x] One real sandbox payout: rb-a0c2aeb1, $19.87, item SUCCESS (txn 3WK03536PJ550571X), independently verified
+- [x] English report: .lovable/payment-module-report.md + Files copy
+
+Open (blocked on platform, not code): hosted HTTPS preview UI acceptance — manual steps in report.
